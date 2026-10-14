@@ -76,20 +76,29 @@
           <div class="mode-desc">
             Nén luồng video về mức bitrate mong muốn trước khi tối ưu container.
           </div>
+        </div>
+      </div>
 
-          <!-- Custom Bitrate Input Group -->
-          <div id="bitrateInputGroup" class="bitrate-input-group" style="display: none;">
-            <label for="customBitrateInput">Mức bitrate mục tiêu:</label>
-            <div class="bitrate-field">
-              <input type="number" id="customBitrateInput" value="10000" min="1000" max="60000" step="500">
-              <span class="unit">kbps</span>
-            </div>
-            <div class="bitrate-presets">
-              <button type="button" class="btn-preset" data-val="8000">8,000</button>
-              <button type="button" class="btn-preset active" data-val="10000">10,000</button>
-              <button type="button" class="btn-preset" data-val="12000">12,000</button>
-            </div>
+      <!-- Dedicated Bitrate Configuration Panel (Hiển thị rõ ràng khi chọn Nén lại bitrate) -->
+      <div id="bitrateConfigCard" class="bitrate-config-card" style="display: none;">
+        <div class="bitrate-config-header">
+          <strong>Cấu hình Bitrate mục tiêu:</strong>
+          <span class="bitrate-config-hint">Nhập số hoặc chọn nhanh mức thông dụng</span>
+        </div>
+        <div class="bitrate-control-row">
+          <div class="bitrate-input-box">
+            <input type="number" id="customBitrateInput" value="10000" min="1000" max="60000" step="500">
+            <span class="unit-label">kbps</span>
           </div>
+          <div class="bitrate-preset-pills">
+            <button type="button" class="preset-pill" data-val="8000">8,000</button>
+            <button type="button" class="preset-pill active" data-val="10000">10,000</button>
+            <button type="button" class="preset-pill" data-val="12000">12,000</button>
+            <button type="button" class="preset-pill" data-val="14000">14,000</button>
+          </div>
+        </div>
+        <div class="bitrate-tip">
+          Khuyến nghị: <strong>10,000 – 12,000 kbps</strong> (độ nét cao cho video chuyển động 60fps mà dung lượng không bị quá nặng).
         </div>
       </div>
 
@@ -194,7 +203,9 @@
     </footer>
   </div>
 
-  <!-- Scripts -->
+  <!-- Scripts (Vendor FFmpeg local for same-origin Web Worker support) -->
+  <script src="vendor/util.js"></script>
+  <script src="vendor/ffmpeg.js"></script>
   <script src="tiktok-bypass.js"></script>
   <script src="app.js"></script>
 </body>

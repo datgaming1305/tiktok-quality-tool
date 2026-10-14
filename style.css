@@ -251,67 +251,97 @@ body {
   line-height: 1.4;
 }
 
-/* Custom Bitrate Input */
-.bitrate-input-group {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+/* Dedicated Bitrate Configuration Panel */
+.bitrate-config-card {
+  margin-top: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
-.bitrate-input-group label {
-  font-size: 0.75rem;
+.bitrate-config-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #fff;
+}
+
+.bitrate-config-hint {
+  font-size: 0.72rem;
   color: var(--text-secondary);
 }
 
-.bitrate-field {
+.bitrate-control-row {
   display: flex;
   align-items: center;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  padding: 4px 8px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.bitrate-field input {
+.bitrate-input-box {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 6px 10px;
+  width: 150px;
+}
+
+.bitrate-input-box input {
   background: none;
   border: none;
   color: #fff;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   width: 100%;
   outline: none;
 }
 
-.bitrate-field .unit {
-  font-size: 0.78rem;
+.unit-label {
+  font-size: 0.75rem;
   color: var(--text-secondary);
   margin-left: 6px;
+  font-weight: 600;
 }
 
-.bitrate-presets {
+.bitrate-preset-pills {
   display: flex;
   gap: 6px;
-  margin-top: 4px;
+  flex-wrap: wrap;
 }
 
-.btn-preset {
+.preset-pill {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  border-radius: 4px;
-  padding: 3px 8px;
-  font-size: 0.72rem;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-preset:hover, .btn-preset.active {
-  background: rgba(254, 44, 85, 0.15);
-  border-color: var(--tiktok-pink);
-  color: #fff;
+.preset-pill:hover, .preset-pill.active {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.bitrate-tip {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.bitrate-tip strong {
+  color: #f59e0b;
 }
 
 /* Primary Button */

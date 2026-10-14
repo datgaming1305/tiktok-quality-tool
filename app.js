@@ -18,9 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const modeInstant = document.getElementById('modeInstant');
     const modeCompress = document.getElementById('modeCompress');
-    const bitrateInputGroup = document.getElementById('bitrateInputGroup');
+    const bitrateConfigCard = document.getElementById('bitrateConfigCard');
     const customBitrateInput = document.getElementById('customBitrateInput');
-    const presetButtons = document.querySelectorAll('.btn-preset');
+    const presetPills = document.querySelectorAll('.preset-pill');
 
     const progressContainer = document.getElementById('progressContainer');
     const progressBar = document.getElementById('progressBar');
@@ -104,33 +104,33 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedMode = 'instant';
         modeInstant.classList.add('active');
         modeCompress.classList.remove('active');
-        bitrateInputGroup.style.display = 'none';
+        bitrateConfigCard.style.display = 'none';
     });
 
     modeCompress.addEventListener('click', () => {
         selectedMode = 'compress';
         modeCompress.classList.add('active');
         modeInstant.classList.remove('active');
-        bitrateInputGroup.style.display = 'flex';
+        bitrateConfigCard.style.display = 'flex';
     });
 
-    // Preset buttons
-    presetButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+    // Preset pills click
+    presetPills.forEach(pill => {
+        pill.addEventListener('click', (e) => {
             e.stopPropagation();
-            presetButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            customBitrateInput.value = btn.getAttribute('data-val');
+            presetPills.forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            customBitrateInput.value = pill.getAttribute('data-val');
         });
     });
 
     customBitrateInput.addEventListener('input', () => {
-        const val = customBitrateInput.value;
-        presetButtons.forEach(b => {
-            if (b.getAttribute('data-val') === val) {
-                b.classList.add('active');
+        const val = customBitrateInput.value.trim();
+        presetPills.forEach(p => {
+            if (p.getAttribute('data-val') === val) {
+                p.classList.add('active');
             } else {
-                b.classList.remove('active');
+                p.classList.remove('active');
             }
         });
     });
@@ -187,12 +187,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function processCompressMode(file, targetBitrate) {
-        updateProgress("Đang tải thư viện FFmpeg WebAssembly...", 5);
+        updateProgress("Đang khởi tạo FFmpeg WebAssembly...", 5);
 
         if (!ffmpegInstance) {
-            await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
-            await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
-
             const { FFmpeg } = window.FFmpegWASM;
             const { toBlobURL } = window.FFmpegUtil;
 
@@ -208,13 +205,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+
+            updateProgress("Đang tải module FFmpeg Core WASM...", 10);
             await ffmpegInstance.load({
                 coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
                 wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
             });
         }
 
-        updateProgress("Nạp dữ liệu video...", 15);
+        updateProgress("Nạp dữ liệu video vào bộ nhớ ảo...", 15);
         const { fetchFile } = window.FFmpegUtil;
         await ffmpegInstance.writeFile('input.mp4', await fetchFile(file));
 
@@ -262,18 +261,5 @@ document.addEventListener('DOMContentLoaded', () => {
         btnProcess.disabled = false;
 
         resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    function loadScript(src) {
-        return new Promise((resolve, reject) => {
-            if (document.querySelector(`script[src="${src}"]`)) {
-                return resolve();
-            }
-            const script = document.createElement('script');
-            script.src = src;
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
     }
 });
