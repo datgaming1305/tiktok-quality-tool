@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateProgress("Đọc dữ liệu video đã nén...", 82);
         const transcodedData = await ffmpegInstance.readFile('output_transcoded.mp4');
 
-        updateProgress("Tối ưu hóa cấu trúc container...", 88);
+        updateProgress("Đang tối ưu video...", 88);
         const outputBytes = window.TikTokBypass.transformMp4(new Uint8Array(transcodedData.buffer), { multiplier: 10 }, (msg, pct) => {
             const finalPct = Math.round(88 + (pct / 100) * 12);
             updateProgress(msg, finalPct);
