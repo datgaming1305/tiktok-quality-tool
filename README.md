@@ -20,11 +20,9 @@ git init
 git add .
 git commit -m "Initial commit TikTok Quality Bypass Web"
 git branch -M main
-git remote add origin https://github.com/<tai-khoan-cua-ban>/tiktok-quality-tool.git
+git remote add origin https://github.com/datgaming1305/tiktok-quality-tool.git
 git push -u origin main
 ```
-
-*(Thay `<tai-khoan-cua-ban>` bằng username GitHub của bạn)*
 
 ### Bước 3: Kích hoạt GitHub Pages
 1. Trong giao diện repository trên GitHub, bấm vào thẻ **Settings** (Cài đặt).
@@ -35,7 +33,7 @@ git push -u origin main
    * Bấm nút **Save**.
 4. Chờ khoảng 1–2 phút, trang web sẽ online tại địa chỉ:
    ```text
-   https://<tai-khoan-cua-ban>.github.io/tiktok-quality-tool/
+   https://datgaming1305.github.io/tiktok-quality-tool/
    ```
 
 ---
