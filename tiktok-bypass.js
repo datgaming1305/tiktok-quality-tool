@@ -431,7 +431,6 @@
         const videoStts = parseStts(data, stts.offset);
 
         const origFrames = videoSizes.length;
-        const timeDelta = videoStts[0].sampleDelta;
         const padCount = origFrames * (multiplier - 1);
         const totalFrames = origFrames + padCount;
 
@@ -439,6 +438,9 @@
         const vTimescale = readU32(data, vMdhd.offset + 20);
         const vDuration = readU32(data, vMdhd.offset + 24);
         const vDurationSec = vDuration / vTimescale;
+
+        // Tính timeDelta trung bình chuẩn theo toàn bộ video (bảo toàn FPS cho cả video VFR)
+        const timeDelta = Math.round(vDuration / origFrames) || videoStts[0].sampleDelta;
 
         log(`Tìm thấy ${origFrames} frames (${(vTimescale / timeDelta).toFixed(0)} fps, ${vDurationSec.toFixed(1)}s)`, 25);
 
@@ -555,7 +557,8 @@
         const mvhd = buildMvhdV1(1000, 4);
 
         // Video Track boxes
-        const vTkhdBox = data.subarray(vtStart, vtStart + readU32(data, vtStart));
+        const vDurationMs = Math.round(vDurationSec * 1000);
+        const vTkhdBox = buildTkhd(data.subarray(vtStart, vtStart + readU32(data, vtStart)), vDurationMs);
         const edtsBox = findBox(data, 'edts', vtStart, vtEnd);
         const videoEdts = edtsBox ? data.subarray(edtsBox.offset, edtsBox.offset + edtsBox.size) : new Uint8Array(0);
         const videoMdhd = data.subarray(vMdhd.offset, vMdhd.offset + vMdhd.size);
