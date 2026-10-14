@@ -696,7 +696,7 @@
             console.warn(`moov size shifted: was ${moovSizeFinal}, now ${moov.length}`);
         }
 
-        log("Hoàn tất đóng gói container MP4 Bypass!", 100);
+        log("Hoàn tất tối ưu hóa container MP4!", 100);
         return concatBytes(ftyp, free, moov, newMdat);
     }
 
