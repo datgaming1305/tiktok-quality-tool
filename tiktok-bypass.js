@@ -28,6 +28,12 @@
                bytes[offset + 3];
     }
 
+    function readU64(bytes, offset) {
+        const hi = readU32(bytes, offset);
+        const lo = readU32(bytes, offset + 4);
+        return hi * 4294967296 + lo;
+    }
+
     function writeU32(bytes, offset, value) {
         bytes[offset] = (value >>> 24) & 0xFF;
         bytes[offset + 1] = (value >>> 16) & 0xFF;
@@ -87,12 +93,37 @@
         const b3 = boxType.charCodeAt(3);
 
         while (pos + 8 <= end) {
-            const size = readU32(data, pos);
-            if (size < 8) break;
+            let size = readU32(data, pos);
+            let headerLen = 8;
+            if (size === 1) {
+                if (pos + 16 > end) break;
+                size = readU64(data, pos + 8);
+                headerLen = 16;
+            } else if (size === 0) {
+                size = end - pos;
+            }
+            if (size < headerLen || pos + size > end) break;
             if (data[pos + 4] === b0 && data[pos + 5] === b1 && data[pos + 6] === b2 && data[pos + 7] === b3) {
-                return { offset: pos, size: size };
+                return { offset: pos, size: size, headerLen: headerLen };
             }
             pos += size;
+        }
+
+        // Quét dự phòng (fallback) theo byte signature
+        for (let i = start; i + 8 <= end; i++) {
+            if (data[i + 4] === b0 && data[i + 5] === b1 && data[i + 6] === b2 && data[i + 7] === b3) {
+                let size = readU32(data, i);
+                let headerLen = 8;
+                if (size === 1 && i + 16 <= end) {
+                    size = readU64(data, i + 8);
+                    headerLen = 16;
+                } else if (size === 0) {
+                    size = end - i;
+                }
+                if (size >= headerLen) {
+                    return { offset: i, size: size, headerLen: headerLen };
+                }
+            }
         }
         return null;
     }
@@ -104,7 +135,7 @@
         for (let i = 0; i < path.length; i++) {
             found = findBox(data, path[i], curStart, curEnd);
             if (!found) return null;
-            curStart = found.offset + 8;
+            curStart = found.offset + (found.headerLen || 8);
             curEnd = found.offset + found.size;
         }
         return found;
@@ -114,14 +145,22 @@
         let pos = moovPos + 8;
         const end = moovPos + moovSize;
         while (pos + 8 <= end) {
-            const size = readU32(data, pos);
-            if (size < 8) break;
+            let size = readU32(data, pos);
+            let headerLen = 8;
+            if (size === 1) {
+                if (pos + 16 > end) break;
+                size = readU64(data, pos + 8);
+                headerLen = 16;
+            } else if (size === 0) {
+                size = end - pos;
+            }
+            if (size < headerLen || pos + size > end) break;
             if (bytesToString(data, pos + 4, pos + 8) === 'trak') {
-                const hdlr = findBoxPath(data, ['mdia', 'hdlr'], pos + 8, pos + size);
+                const hdlr = findBoxPath(data, ['mdia', 'hdlr'], pos + headerLen, pos + size);
                 if (hdlr) {
                     const htype = bytesToString(data, hdlr.offset + 16, hdlr.offset + 20);
                     if (htype === handlerStr) {
-                        return { offset: pos, size: size };
+                        return { offset: pos, size: size, headerLen: headerLen };
                     }
                 }
             }
@@ -349,10 +388,10 @@
         const moovBox = findBox(data, 'moov');
         const mdatBox = findBox(data, 'mdat');
         if (!moovBox || !mdatBox) {
-            throw new Error("Tệp MP4 không hợp lệ (thiếu moov hoặc mdat).");
+            throw new Error("Không thể phân tích cấu trúc video (không tìm thấy moov/mdat). Bạn hãy chọn chế độ 'Nén giảm dung lượng' để hệ thống tự động chuẩn hóa video này.");
         }
 
-        const mdatDataStart = mdatBox.offset + 8;
+        const mdatDataStart = mdatBox.offset + (mdatBox.headerLen || 8);
 
         // Video track
         const vt = findTrackByHandler(data, moovBox.offset, moovBox.size, 'vide');
@@ -530,7 +569,9 @@
                 break;
             }
         }
-        if (avccRel === -1) throw new Error("Không tìm thấy box avcC trong stsd!");
+        if (avccRel === -1) {
+            throw new Error("Video này không phải chuẩn H.264 (có thể do quay bằng chế độ HEVC/H.265 của điện thoại). Vui lòng chọn chế độ 'Nén giảm dung lượng' để hệ thống tự động chuyển sang chuẩn TikTok!");
+        }
 
         const avccStart = avccRel - 4;
         const avccOrigSize = readU32(stsdContent, avccStart);
