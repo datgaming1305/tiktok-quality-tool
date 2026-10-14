@@ -169,11 +169,18 @@
         return null;
     }
 
-    function parseStco(data, offset) {
-        const count = readU32(data, offset + 12);
-        const out = new Uint32Array(count);
-        for (let i = 0; i < count; i++) {
-            out[i] = readU32(data, offset + 16 + i * 4);
+    function parseChunkOffsets(data, box) {
+        const is64 = (bytesToString(data, box.offset + 4, box.offset + 8) === 'co64');
+        const count = readU32(data, box.offset + 12);
+        const out = new Float64Array(count);
+        if (is64) {
+            for (let i = 0; i < count; i++) {
+                out[i] = readU64(data, box.offset + 16 + i * 8);
+            }
+        } else {
+            for (let i = 0; i < count; i++) {
+                out[i] = readU32(data, box.offset + 16 + i * 4);
+            }
         }
         return out;
     }
@@ -405,7 +412,7 @@
         const sbStart = stbl.offset + 8;
         const sbEnd = stbl.offset + stbl.size;
 
-        const stco = findBox(data, 'stco', sbStart, sbEnd);
+        const stco = findBox(data, 'stco', sbStart, sbEnd) || findBox(data, 'co64', sbStart, sbEnd);
         const stsz = findBox(data, 'stsz', sbStart, sbEnd);
         const stsc = findBox(data, 'stsc', sbStart, sbEnd);
         const stts = findBox(data, 'stts', sbStart, sbEnd);
@@ -415,10 +422,10 @@
         const ctts = findBox(data, 'ctts', sbStart, sbEnd);
 
         if (!stco || !stsz || !stsc || !stts || !stsd) {
-            throw new Error("Thiếu các bảng metadata video thiết yếu (stco/stsz/stsc/stts/stsd).");
+            throw new Error("Thiếu các bảng metadata video thiết yếu (stco/co64/stsz/stsc/stts/stsd).");
         }
 
-        const videoChunks = parseStco(data, stco.offset);
+        const videoChunks = parseChunkOffsets(data, stco);
         const videoSizes = parseStsz(data, stsz.offset);
         const videoStsc = parseStsc(data, stsc.offset);
         const videoStts = parseStts(data, stts.offset);
@@ -471,7 +478,7 @@
             const aSbStart = aStbl.offset + 8;
             const aSbEnd = aStbl.offset + aStbl.size;
 
-            const aStco = findBox(data, 'stco', aSbStart, aSbEnd);
+            const aStco = findBox(data, 'stco', aSbStart, aSbEnd) || findBox(data, 'co64', aSbStart, aSbEnd);
             const aStsz = findBox(data, 'stsz', aSbStart, aSbEnd);
             const aStsc = findBox(data, 'stsc', aSbStart, aSbEnd);
             const aStts = findBox(data, 'stts', aSbStart, aSbEnd);
@@ -479,7 +486,11 @@
             const aSgpd = findBox(data, 'sgpd', aSbStart, aSbEnd);
             const aSbgp = findBox(data, 'sbgp', aSbStart, aSbEnd);
 
-            audioChunks = parseStco(data, aStco.offset);
+            if (!aStco || !aStsz || !aStsc || !aStts || !aStsd) {
+                throw new Error("Thiếu bảng metadata của luồng âm thanh.");
+            }
+
+            audioChunks = parseChunkOffsets(data, aStco);
             audioSizes = parseStsz(data, aStsz.offset);
             audioStts = parseStts(data, aStts.offset);
 
