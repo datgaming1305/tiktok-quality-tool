@@ -622,11 +622,16 @@
         const btrtNew = buildBtrt(0, maxBr, newVAvgBr);
         const videoStsdNew = buildStsdVideo(avc1Fixed, avccNew, colrBox, paspBox, btrtNew);
 
-        // Video Tables
-        const videoSttsNew = buildStts([
-            { sampleCount: origFrames, sampleDelta: timeDelta },
-            { sampleCount: padCount, sampleDelta: timeDelta }
-        ]);
+        // Video Tables (Giữ nguyên toàn bộ stts gốc để video VFR/CFR không bao giờ bị slow-motion)
+        const newSttsEntries = [];
+        for (let i = 0; i < videoStts.length; i++) {
+            newSttsEntries.push(videoStts[i]);
+        }
+        newSttsEntries.push({
+            sampleCount: padCount,
+            sampleDelta: timeDelta
+        });
+        const videoSttsNew = buildStts(newSttsEntries);
 
         const videoStss = stss ? data.subarray(stss.offset, stss.offset + stss.size) : new Uint8Array(0);
         const videoSdtp = sdtp ? data.subarray(sdtp.offset, sdtp.offset + sdtp.size) : new Uint8Array(0);
