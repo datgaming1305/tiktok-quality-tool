@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TikTok Ultra Quality Bypass Tool — 60FPS Chuẩn Nét</title>
+  <title>TikTok Video Container Optimizer</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20%22100%22%20%22100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
 </head>
 <body>
 
@@ -14,11 +13,11 @@
     <header class="header">
       <div class="badge-pill">
         <span class="badge-dot"></span>
-        <span>Client-Side • 100% Bảo Mật • Không Gửi Server</span>
+        <span>Xử lý trực tiếp trên trình duyệt (Client-Side)</span>
       </div>
-      <h1 class="title">TikTok <span>Quality Bypass</span> Engine</h1>
+      <h1 class="title">TikTok Video <span>Container Optimizer</span></h1>
       <p class="subtitle">
-        Tối ưu hóa nhị phân ISO MP4 Container, bơm Ghost Frames NALU x10 & nâng cấp 64-bit max duration để vượt qua bộ nén của TikTok, bảo toàn 100% độ nét 60fps!
+        Tối ưu hóa cấu trúc container MP4, căn chỉnh metadata và thời lượng hiển thị giúp hạn chế việc bị nén giảm chất lượng khi đăng tải lên TikTok.
       </p>
     </header>
 
@@ -26,16 +25,29 @@
     <main class="glass-card">
       <!-- Drop Zone -->
       <div id="dropzone" class="dropzone">
-        <div class="dropzone-icon">📥</div>
+        <svg class="dropzone-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
         <div class="dropzone-text">Kéo thả tệp video MP4 vào đây hoặc bấm để chọn</div>
-        <div class="dropzone-subtext">Hỗ trợ định dạng .mp4 (xuất từ CapCut, Premiere, v.v.)</div>
+        <div class="dropzone-subtext">Định dạng hỗ trợ: .mp4</div>
         <input type="file" id="fileInput" accept="video/mp4" style="display: none;">
       </div>
 
-      <!-- File Info Bar (Hidden by default) -->
+      <!-- File Info Bar -->
       <div id="fileInfoBar" class="file-info-bar" style="display: none;">
         <div class="file-info-details">
-          <span class="file-icon">🎬</span>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+            <line x1="7" y1="2" x2="7" y2="22"></line>
+            <line x1="17" y1="2" x2="17" y2="22"></line>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <line x1="2" y1="7" x2="7" y2="7"></line>
+            <line x1="2" y1="17" x2="7" y2="17"></line>
+            <line x1="17" y1="17" x2="22" y2="17"></line>
+            <line x1="17" y1="7" x2="22" y2="7"></line>
+          </svg>
           <div>
             <div id="fileName" class="file-name">video.mp4</div>
             <div id="fileMeta" class="file-meta">0.0 MB</div>
@@ -48,28 +60,42 @@
       <div class="options-grid">
         <div id="modeInstant" class="mode-option active">
           <div class="mode-header">
-            <span>⚡ Chế độ Siêu Tốc</span>
-            <span style="font-size: 0.72rem; color: var(--tiktok-cyan); font-weight: 700;">(Khuyên dùng)</span>
+            <span>Giữ nguyên luồng gốc</span>
+            <span class="tag-recommend">Khuyến nghị</span>
           </div>
           <div class="mode-desc">
-            Xử lý nhị phân trực tiếp trong 1 giây. Giữ trọn 100% chất lượng gốc xuất từ CapCut (Zero Re-encode).
+            Chỉ can thiệp metadata container trong 1 giây, giữ nguyên 100% luồng video/audio gốc không mã hóa lại.
           </div>
         </div>
 
         <div id="modeCompress" class="mode-option">
           <div class="mode-header">
-            <span>🎛️ Nén Bitrate 10 Mbps</span>
-            <span style="font-size: 0.72rem; color: #f59e0b; font-weight: 700;">(FFmpeg WASM)</span>
+            <span>Nén lại bitrate</span>
+            <span class="tag-custom">Tùy chỉnh</span>
           </div>
           <div class="mode-desc">
-            Tự động nén lại video về mức 10,000 kbps nếu lỡ xuất file quá nặng trước khi bypass (chạy mất 1–3 phút).
+            Nén luồng video về mức bitrate mong muốn trước khi tối ưu container.
+          </div>
+
+          <!-- Custom Bitrate Input Group -->
+          <div id="bitrateInputGroup" class="bitrate-input-group" style="display: none;">
+            <label for="customBitrateInput">Mức bitrate mục tiêu:</label>
+            <div class="bitrate-field">
+              <input type="number" id="customBitrateInput" value="10000" min="1000" max="60000" step="500">
+              <span class="unit">kbps</span>
+            </div>
+            <div class="bitrate-presets">
+              <button type="button" class="btn-preset" data-val="8000">8,000</button>
+              <button type="button" class="btn-preset active" data-val="10000">10,000</button>
+              <button type="button" class="btn-preset" data-val="12000">12,000</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Submit Action Button -->
+      <!-- Action Button -->
       <button id="btnProcess" class="btn-primary" disabled>
-        <span>⚡ Bắt Đầu Bypass TikTok</span>
+        <span>Bắt đầu xử lý</span>
       </button>
 
       <!-- Progress Section -->
@@ -88,65 +114,83 @@
     <!-- Result Card -->
     <div id="resultCard" class="glass-card result-card">
       <div class="result-header">
-        <span>🎉 Đã Xử Lý Bypass Hoàn Tất!</span>
+        <span>Xử lý hoàn tất</span>
       </div>
 
       <div class="stats-grid">
         <div class="stat-item">
-          <div class="stat-label">Dung Lượng Gốc</div>
+          <div class="stat-label">Dung lượng gốc</div>
           <div id="statOrigSize" class="stat-val">0 MB</div>
         </div>
         <div class="stat-item">
-          <div class="stat-label">Dung Lượng Đầu Ra</div>
+          <div class="stat-label">Dung lượng sau xử lý</div>
           <div id="statNewSize" class="stat-val">0 MB</div>
         </div>
         <div class="stat-item">
-          <div class="stat-label">Trạng Thái</div>
-          <div class="stat-val" style="color: var(--tiktok-cyan);">60FPS Bypass Ready</div>
+          <div class="stat-label">Trạng thái</div>
+          <div class="stat-val" style="color: var(--tiktok-cyan);">Sẵn sàng đăng tải</div>
         </div>
       </div>
 
-      <a id="btnDownload" class="btn-download" href="#" download="video_tiktok_bypass.mp4">
-        <span>📥 Tải Video Bypass Về Máy</span>
+      <a id="btnDownload" class="btn-download" href="#" download="video_tiktok_optimized.mp4">
+        <span>Tải video (.mp4)</span>
       </a>
     </div>
 
-    <!-- CapCut Best Settings Guide -->
-    <section class="glass-card">
-      <h2 class="guide-title">
-        <span>💡 Quy Trình Xuất CapCut Chuẩn Nhất Để Lên TikTok Không Bị Mờ:</span>
-      </h2>
-      <ul class="guide-steps">
-        <li class="guide-step">
-          <span class="step-num">1</span>
-          <div>
-            <strong>Độ phân giải:</strong> Khuyến nghị <strong>1080x1920 (Dọc 9:16)</strong> để bung trọn màn hình điện thoại. Tránh xuất chiều ngang > 1920px (như 2400x1080) vì TikTok sẽ tự nén thu nhỏ.
+    <!-- TikTok Guidelines Grid (Chuẩn theo bảng thông số TikTok) -->
+    <section class="glass-card guidelines-section">
+      <h2 class="guidelines-title">Tiêu chuẩn định dạng video tải lên TikTok</h2>
+      
+      <div class="guidelines-grid">
+        <div class="guide-box">
+          <div class="guide-box-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+            <strong>Dung lượng và thời lượng</strong>
           </div>
-        </li>
-        <li class="guide-step">
-          <span class="step-num">2</span>
-          <div>
-            <strong>Tốc độ khung hình:</strong> Chọn đúng <strong>60 fps</strong>.
+          <div class="guide-box-content">
+            Dung lượng tối đa: 30 GB, thời lượng video: tối đa 60 phút.
           </div>
-        </li>
-        <li class="guide-step">
-          <span class="step-num">3</span>
-          <div>
-            <strong>Bitrate:</strong> Chọn <strong>Tùy chỉnh (Custom)</strong> &gt; Nhập <strong>12,000 kbps</strong> &gt; Tích chọn <strong>VBR (Variable Bit Rate)</strong>. (File xuất ra sẽ nặng tầm ~95–100MB cho clip 80s).
+        </div>
+
+        <div class="guide-box">
+          <div class="guide-box-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            <strong>Định dạng tập tin</strong>
           </div>
-        </li>
-        <li class="guide-step">
-          <span class="step-num">4</span>
-          <div>
-            <strong>Kéo file vào trang web này:</strong> Bấm <em>"Bắt đầu Bypass"</em> trong 1 giây là xong, sau đó mang file tải về đăng thẳng lên TikTok!
+          <div class="guide-box-content">
+            Đề xuất: ".mp4". Có hỗ trợ các định dạng chính khác.
           </div>
-        </li>
-      </ul>
+        </div>
+
+        <div class="guide-box">
+          <div class="guide-box-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            <strong>Độ phân giải video</strong>
+          </div>
+          <div class="guide-box-content">
+            Độ phân giải cao khuyến nghị: 1080p, 1440p, 4K (tùy theo video gốc).
+          </div>
+        </div>
+
+        <div class="guide-box">
+          <div class="guide-box-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            <strong>Tỷ lệ khung hình</strong>
+          </div>
+          <div class="guide-box-content">
+            Đề xuất: 16:9 cho chế độ ngang, 9:16 cho chế độ dọc.
+          </div>
+        </div>
+      </div>
+
+      <div class="bitrate-note">
+        <strong>Lưu ý về Bitrate khi xuất file:</strong> Trong CapCut hoặc Premiere, bạn có thể chọn Bitrate <strong>Tùy chỉnh (VBR)</strong> khoảng <strong>10,000 – 12,000 kbps</strong> để tối ưu độ nét chuyển động mà không làm dung lượng quá nặng. Tốc độ khung hình (FPS) và độ phân giải giữ nguyên theo video gốc.
+      </div>
     </section>
 
     <!-- Footer -->
     <footer class="footer">
-      Mã nguồn mở miễn phí • Triển khai trên GitHub Pages • Tối ưu hóa cho Creator & Gamer
+      Mã nguồn mở GitHub • Hoạt động offline trong trình duyệt • Không lưu trữ dữ liệu
     </footer>
   </div>
 

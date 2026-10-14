@@ -1,5 +1,5 @@
 /**
- * TikTok Quality Bypass Tool - Frontend App Controller
+ * TikTok Video Container Optimizer - Frontend Controller
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const modeInstant = document.getElementById('modeInstant');
     const modeCompress = document.getElementById('modeCompress');
+    const bitrateInputGroup = document.getElementById('bitrateInputGroup');
+    const customBitrateInput = document.getElementById('customBitrateInput');
+    const presetButtons = document.querySelectorAll('.btn-preset');
 
     const progressContainer = document.getElementById('progressContainer');
     const progressBar = document.getElementById('progressBar');
@@ -101,12 +104,35 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedMode = 'instant';
         modeInstant.classList.add('active');
         modeCompress.classList.remove('active');
+        bitrateInputGroup.style.display = 'none';
     });
 
     modeCompress.addEventListener('click', () => {
         selectedMode = 'compress';
         modeCompress.classList.add('active');
         modeInstant.classList.remove('active');
+        bitrateInputGroup.style.display = 'flex';
+    });
+
+    // Preset buttons
+    presetButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            presetButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            customBitrateInput.value = btn.getAttribute('data-val');
+        });
+    });
+
+    customBitrateInput.addEventListener('input', () => {
+        const val = customBitrateInput.value;
+        presetButtons.forEach(b => {
+            if (b.getAttribute('data-val') === val) {
+                b.classList.add('active');
+            } else {
+                b.classList.remove('active');
+            }
+        });
     });
 
     function logTerminal(message) {
@@ -136,7 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectedMode === 'instant') {
                 await processInstantMode(selectedFile);
             } else {
-                await processCompressMode(selectedFile);
+                const targetBitrate = parseInt(customBitrateInput.value, 10) || 10000;
+                await processCompressMode(selectedFile, targetBitrate);
             }
         } catch (error) {
             console.error(error);
@@ -147,12 +174,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function processInstantMode(file) {
-        updateProgress("Đang đọc tệp video vào bộ nhớ RAM...", 5);
+        updateProgress("Đang đọc tệp video vào bộ nhớ...", 10);
 
         const arrayBuffer = await file.arrayBuffer();
         const inputBytes = new Uint8Array(arrayBuffer);
 
-        // Run transformation
         const outputBytes = window.TikTokBypass.transformMp4(inputBytes, { multiplier: 10 }, (msg, pct) => {
             updateProgress(msg, pct);
         });
@@ -160,10 +186,9 @@ document.addEventListener('DOMContentLoaded', () => {
         finishProcessing(file, outputBytes);
     }
 
-    async function processCompressMode(file) {
-        updateProgress("Đang tải thư viện FFmpeg WebAssembly từ CDN...", 5);
+    async function processCompressMode(file, targetBitrate) {
+        updateProgress("Đang tải thư viện FFmpeg WebAssembly...", 5);
 
-        // Dynamically load ffmpeg if not loaded
         if (!ffmpegInstance) {
             await loadScript('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js');
             await loadScript('https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js');
@@ -179,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pct = Math.min(80, Math.round(15 + progress * 65));
                 progressBar.style.width = `${pct}%`;
                 progressPercent.textContent = `${pct}%`;
-                progressText.textContent = `Đang nén video về 10 Mbps (${(progress * 100).toFixed(0)}%)...`;
+                progressText.textContent = `Đang nén video về ${targetBitrate.toLocaleString()} kbps (${(progress * 100).toFixed(0)}%)...`;
             });
 
             const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
@@ -189,18 +214,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        updateProgress("Đang nạp video vào bộ nhớ FFmpeg...", 15);
+        updateProgress("Nạp dữ liệu video...", 15);
         const { fetchFile } = window.FFmpegUtil;
         await ffmpegInstance.writeFile('input.mp4', await fetchFile(file));
 
-        updateProgress("Bắt đầu nén luồng video về 10,000 kbps...", 20);
+        const brStr = `${targetBitrate}k`;
+        const bufStr = `${targetBitrate * 2}k`;
+        updateProgress(`Bắt đầu nén luồng video về ${targetBitrate.toLocaleString()} kbps...`, 20);
+
         await ffmpegInstance.exec([
             '-i', 'input.mp4',
             '-c:v', 'libx264',
             '-preset', 'fast',
-            '-b:v', '10000k',
-            '-maxrate', '10000k',
-            '-bufsize', '20000k',
+            '-b:v', brStr,
+            '-maxrate', brStr,
+            '-bufsize', bufStr,
             '-c:a', 'copy',
             'output_transcoded.mp4'
         ]);
@@ -208,8 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateProgress("Đọc dữ liệu video đã nén...", 82);
         const transcodedData = await ffmpegInstance.readFile('output_transcoded.mp4');
 
-        // Now run the bypass
-        updateProgress("Thực thi chuỗi thuật toán TikTok Quality Bypass...", 88);
+        updateProgress("Tối ưu hóa cấu trúc container...", 88);
         const outputBytes = window.TikTokBypass.transformMp4(new Uint8Array(transcodedData.buffer), { multiplier: 10 }, (msg, pct) => {
             const finalPct = Math.round(88 + (pct / 100) * 12);
             updateProgress(msg, finalPct);
@@ -219,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function finishProcessing(origFile, outputBytes) {
-        updateProgress("Đã hoàn tất 100%!", 100);
+        updateProgress("Hoàn tất xử lý.", 100);
 
         const blob = new Blob([outputBytes], { type: 'video/mp4' });
         const downloadUrl = URL.createObjectURL(blob);
@@ -229,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const originalBase = origFile.name.replace(/\.[^/.]+$/, "");
         btnDownload.href = downloadUrl;
-        btnDownload.download = `${originalBase}_tiktok_bypass.mp4`;
+        btnDownload.download = `${originalBase}_tiktok_optimized.mp4`;
 
         resultCard.style.display = 'block';
         btnProcess.disabled = false;
