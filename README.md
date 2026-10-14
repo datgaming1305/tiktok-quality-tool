@@ -42,10 +42,9 @@ Khi tải video lên TikTok (đặc biệt là video game hành động, drift x
    * Chọn **Tùy chỉnh (Custom)** > Nhập **`12000` Kbps**.
    * Tích chọn **VBR (Variable Bit Rate)**.
    * *(File xuất ra sẽ chỉ nặng khoảng ~95 – 100 MB cho clip 80 giây)*.
-4. **Xử lý Bypass**:
-   * Truy cập [Web Bypass Tool](https://datgaming1305.github.io/tiktok-quality-tool/), kéo thả file video vào.
-   * Chọn **Chế độ Siêu Tốc** > Bấm **Bắt Đầu Bypass TikTok**.
-   * Tải file đã xử lý về máy và đăng thẳng lên TikTok!
+4. **Phương thức tải lên TikTok (Quan trọng)**:
+   * **Bắt buộc tải lên bằng TikTok Web (Trình duyệt máy tính)**: Truy cập [tiktok.com/creator](https://www.tiktok.com/creator-center/upload) để đăng tải. Trình duyệt truyền tải file gốc trực tiếp lên máy chủ mà không qua bộ lọc nén của thiết bị.
+   * **Không tải qua ứng dụng TikTok / TikTok Studio trên điện thoại**: Ứng dụng di động tự động nén sơ bộ trước khi gửi, làm mất tác dụng bypass và dễ gây lỗi không nhận diện thời lượng video.
 
 ---
 
@@ -55,9 +54,3 @@ Khi tải video lên TikTok (đặc biệt là video game hành động, drift x
 * **ISO Base Media File Format Parser**: Bộ phân giải cấu trúc nhị phân MP4 tùy biến
 * **WebAssembly (WASM)**: `@ffmpeg/ffmpeg` cho chế độ nén Client-Side
 * **HTML5 & CSS3 Modern UI**: Glassmorphism, Dark Theme, Responsive Mobile/Desktop
-
----
-
-## 📄 Bản Quyền & Giấy Phép
-
-Phát hành theo giấy phép [MIT License](LICENSE). Dự án mã nguồn mở phục vụ cộng đồng Content Creator & Gamer.
