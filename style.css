@@ -340,6 +340,91 @@ body {
   line-height: 1.4;
 }
 
+/* Filter options row (Denoise & Sharpen) */
+.filter-options-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 640px) {
+  .filter-options-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.filter-toggle-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.filter-toggle-label:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.filter-toggle-label input[type="checkbox"] {
+  display: none;
+}
+
+.filter-checkbox-custom {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.filter-toggle-label input[type="checkbox"]:checked + .filter-checkbox-custom {
+  background: var(--tiktok-cyan);
+  border-color: var(--tiktok-cyan);
+}
+
+.filter-toggle-label input[type="checkbox"]:checked + .filter-checkbox-custom::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid #000;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-top: -1px;
+}
+
+.filter-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filter-text strong {
+  font-size: 0.8rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.filter-text small {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.25;
+}
+
 .bitrate-tip strong {
   color: #f59e0b;
 }

@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const bitrateConfigCard = document.getElementById('bitrateConfigCard');
     const customBitrateInput = document.getElementById('customBitrateInput');
     const presetPills = document.querySelectorAll('.preset-pill');
+    const denoiseToggle = document.getElementById('denoiseToggle');
+    const sharpenToggle = document.getElementById('sharpenToggle');
 
     const progressContainer = document.getElementById('progressContainer');
     const progressBar = document.getElementById('progressBar');
@@ -219,18 +221,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const brStr = `${targetBitrate}k`;
         const bufStr = `${targetBitrate * 2}k`;
-        updateProgress(`Bắt đầu nén luồng video về ${targetBitrate.toLocaleString()} kbps...`, 20);
 
-        await ffmpegInstance.exec([
-            '-i', 'input.mp4',
+        const vfFilters = [];
+        const isDenoise = denoiseToggle ? denoiseToggle.checked : true;
+        const isSharpen = sharpenToggle ? sharpenToggle.checked : true;
+
+        if (isDenoise) {
+            vfFilters.push('hqdn3d=1.5:1.5:3:3');
+        }
+        if (isSharpen) {
+            vfFilters.push('unsharp=5:5:0.8:5:5:0.0');
+        }
+
+        const filterSummary = [];
+        if (isDenoise) filterSummary.push('Khử nhiễu hqdn3d');
+        if (isSharpen) filterSummary.push('Làm nét unsharp');
+        const filterText = filterSummary.length > 0 ? ` [${filterSummary.join(' + ')}]` : '';
+
+        updateProgress(`Bắt đầu xử lý video về ${targetBitrate.toLocaleString()} kbps${filterText}...`, 20);
+
+        const ffmpegArgs = [
+            '-i', 'input.mp4'
+        ];
+
+        if (vfFilters.length > 0) {
+            ffmpegArgs.push('-vf', vfFilters.join(','));
+        }
+
+        ffmpegArgs.push(
             '-c:v', 'libx264',
             '-preset', 'fast',
             '-b:v', brStr,
             '-maxrate', brStr,
             '-bufsize', bufStr,
+            '-pix_fmt', 'yuv420p',
             '-c:a', 'copy',
             'output_transcoded.mp4'
-        ]);
+        );
+
+        await ffmpegInstance.exec(ffmpegArgs);
 
         updateProgress("Đọc dữ liệu video đã nén...", 82);
         const transcodedData = await ffmpegInstance.readFile('output_transcoded.mp4');

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tối Ưu Video TikTok</title>
-  <link rel="stylesheet" href="style.css?v=2.8">
+  <link rel="stylesheet" href="style.css?v=2.9">
 </head>
 <body>
 
@@ -95,6 +95,24 @@
             <button type="button" class="preset-pill" data-val="14000">14,000</button>
             <button type="button" class="preset-pill" data-val="16000">16,000</button>
           </div>
+        </div>
+        <div class="filter-options-row">
+          <label class="filter-toggle-label">
+            <input type="checkbox" id="denoiseToggle" checked>
+            <span class="filter-checkbox-custom"></span>
+            <span class="filter-text">
+              <strong>Khử nhiễu thông minh (Denoise)</strong>
+              <small>Lọc sạch hạt noise và nhiễu viền trước khi nén</small>
+            </span>
+          </label>
+          <label class="filter-toggle-label">
+            <input type="checkbox" id="sharpenToggle" checked>
+            <span class="filter-checkbox-custom"></span>
+            <span class="filter-text">
+              <strong>Làm nét viền (Sharpen)</strong>
+              <small>Tăng cường chi tiết viền để giữ độ trong và sắc nét</small>
+            </span>
+          </label>
         </div>
       </div>
 
@@ -206,9 +224,9 @@
   </div>
 
   <!-- Scripts (Vendor FFmpeg local for same-origin Web Worker support) -->
-  <script src="vendor/util.js?v=2.8"></script>
-  <script src="vendor/ffmpeg.js?v=2.8"></script>
-  <script src="tiktok-bypass.js?v=2.8"></script>
-  <script src="app.js?v=2.8"></script>
+  <script src="vendor/util.js?v=2.9"></script>
+  <script src="vendor/ffmpeg.js?v=2.9"></script>
+  <script src="tiktok-bypass.js?v=2.9"></script>
+  <script src="app.js?v=2.9"></script>
 </body>
 </html>
