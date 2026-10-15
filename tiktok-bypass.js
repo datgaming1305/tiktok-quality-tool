@@ -351,7 +351,7 @@
         return buildBox('mdhd', payload);
     }
 
-    function updateTkhd(origBoxBytes, newTrackId, newDurationMs, newAltGroup) {
+    function updateTkhd(origBoxBytes, newTrackId, newDurationMs, newAltGroup, volume) {
         const out = new Uint8Array(origBoxBytes);
         const ver = out[8];
         if (ver === 0) {
@@ -360,6 +360,10 @@
             if (newAltGroup !== undefined) {
                 out[42] = (newAltGroup >> 8) & 0xFF;
                 out[43] = newAltGroup & 0xFF;
+            }
+            if (volume !== undefined) {
+                out[44] = (volume >> 8) & 0xFF;
+                out[45] = volume & 0xFF;
             }
         } else {
             if (newTrackId !== undefined) writeU32(out, 28, newTrackId);
@@ -370,6 +374,10 @@
             if (newAltGroup !== undefined) {
                 out[54] = (newAltGroup >> 8) & 0xFF;
                 out[55] = newAltGroup & 0xFF;
+            }
+            if (volume !== undefined) {
+                out[56] = (volume >> 8) & 0xFF;
+                out[57] = volume & 0xFF;
             }
         }
         return out;
@@ -661,7 +669,7 @@
         const t3Dur = A * aDelta + padSamples * 1;
         const t3DurMs = Math.round(t3Dur * 1000 / aTimescale);
 
-        const t3TkhdBox = updateTkhd(aTkhdOrig, 3, t3DurMs, 2); // track_id = 3, alt_group = 2
+        const t3TkhdBox = updateTkhd(aTkhdOrig, 3, t3DurMs, 2, 0); // track_id = 3, alt_group = 2, muted volume = 0
         const t3MdhdBox = buildMdhd(data.subarray(aMdhd.offset + 8, aMdhd.offset + aMdhd.size), t3Dur, 0x55C4);
         const t3EdtsBox = buildElst(t3DurMs);
         const t3HdlrBox = buildHdlr('soun', 'SoundHandler');

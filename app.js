@@ -232,12 +232,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     ratio = Math.max(0, Math.min(1, currentTimeSec / currentVideoDurationSec));
                 }
 
-                const subPct = Math.round(ratio * 100);
-                const overallPct = Math.min(80, Math.round(15 + ratio * 65));
+                const currentPct = Math.min(80, Math.round(15 + ratio * 65));
 
-                progressBar.style.width = `${overallPct}%`;
-                progressPercent.textContent = `${overallPct}%`;
-                progressText.textContent = `Đang nén video về ${currentTargetBitrate.toLocaleString()} kbps (${subPct}%)...`;
+                progressBar.style.width = `${currentPct}%`;
+                progressPercent.textContent = `${currentPct}%`;
+                progressText.textContent = `Đang nén video về ${currentTargetBitrate.toLocaleString()} kbps...`;
             });
 
             const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
