@@ -1,7 +1,8 @@
 /**
  * TikTok Quality Bypass Engine (Pure JavaScript Client-Side)
  * ISO Base Media File Format (MP4) Container Optimization & FastStart
- * Implements 100% Haze Quality Method (Clean Video Track + Track 3 Audio Padding x10)
+ * Implements 100% Haze Quality Method
+ * Supports both H.264 (AVC) and H.265 (HEVC)
  */
 
 (function (root, factory) {
@@ -228,11 +229,11 @@
         return out;
     }
 
-    function buildFtyp() {
+    function buildFtyp(isH265 = false) {
         const brand = stringToBytes('isom');
         const ver = new Uint8Array(4);
         writeU32(ver, 0, 512);
-        const compat = stringToBytes('isomiso2avc1mp41');
+        const compat = stringToBytes(isH265 ? 'isomiso2mp41' : 'isomiso2avc1mp41');
         return buildBox('ftyp', concatBytes(brand, ver, compat));
     }
 
@@ -257,13 +258,13 @@
         return buildBox('avcC', payload);
     }
 
-    function buildStsdVideo(fixedFields, avccBox, colrBox, paspBox, btrtBox) {
-        const avc1Content = concatBytes(fixedFields, avccBox, colrBox, paspBox, btrtBox);
-        const avc1 = buildBox('avc1', avc1Content);
+    function buildStsdVideo(fixedFields, avccOrHvccBox, colrBox, paspBox, btrtBox, sampleEntryType = 'avc1') {
+        const entryContent = concatBytes(fixedFields, avccOrHvccBox, colrBox, paspBox, btrtBox);
+        const entryBox = buildBox(sampleEntryType, entryContent);
         const header = new Uint8Array(8);
         writeU32(header, 0, 0); // version & flags
         writeU32(header, 4, 1); // entry count = 1
-        return buildBox('stsd', concatBytes(header, avc1));
+        return buildBox('stsd', concatBytes(header, entryBox));
     }
 
     function buildStts(entries) {
@@ -388,6 +389,7 @@
     /**
      * Main transformation function
      * Transforms MP4 to 100% exact Haze Quality Method structure
+     * Supports both H.264 (AVC) and H.265 (HEVC)
      * @param {Uint8Array} data
      * @param {Object} options
      * @param {Function} onProgress
@@ -445,12 +447,15 @@
         const vDurationSec = vDuration / vTimescale;
         const vDurationMs = Math.round(vDurationSec * 1000);
 
-        log(`Tìm thấy ${origFrames} frames (${(origFrames / vDurationSec).toFixed(0)} fps, ${vDurationSec.toFixed(1)}s)`, 30);
-
-        // Nâng cấp AVC High Profile (0x64) + btrt
+        // Detect Codec: H.264 (avcC) or H.265 (hvcC)
         const stsdContent = data.subarray(vStsd.offset + 8, vStsd.offset + vStsd.size);
-        const avc1Fixed = stsdContent.subarray(16, 94);
+        const visualFixed = stsdContent.subarray(16, 94); // 78-byte VisualSampleEntry fixed fields
 
+        let isH265 = false;
+        let codecBoxNew = null;
+        let sampleEntryType = 'avc1';
+
+        // Check avcC (H.264)
         let avccRel = -1;
         for (let i = 0; i < stsdContent.length - 4; i++) {
             if (stsdContent[i] === 97 && stsdContent[i+1] === 118 && stsdContent[i+2] === 99 && stsdContent[i+3] === 67) {
@@ -458,13 +463,34 @@
                 break;
             }
         }
-        if (avccRel === -1) {
-            throw new Error("Video này không phải chuẩn H.264 (avcC). Vui lòng chọn chế độ 'Nén giảm dung lượng' để hệ thống tự động chuyển sang chuẩn TikTok!");
+
+        // Check hvcC (H.265)
+        let hvccRel = -1;
+        for (let i = 0; i < stsdContent.length - 4; i++) {
+            if (stsdContent[i] === 104 && stsdContent[i+1] === 118 && stsdContent[i+2] === 99 && stsdContent[i+3] === 67) {
+                hvccRel = i;
+                break;
+            }
         }
 
-        const avccStart = avccRel - 4;
-        const avccOrigSize = readU32(stsdContent, avccStart);
-        const avccNew = buildAvcc(stsdContent.subarray(avccStart + 8, avccStart + avccOrigSize));
+        if (avccRel !== -1) {
+            isH265 = false;
+            sampleEntryType = 'avc1';
+            const avccStart = avccRel - 4;
+            const avccOrigSize = readU32(stsdContent, avccStart);
+            codecBoxNew = buildAvcc(stsdContent.subarray(avccStart + 8, avccStart + avccOrigSize));
+            log(`Tìm thấy video H.264/AVC: ${origFrames} frames (${(origFrames / vDurationSec).toFixed(0)} fps, ${vDurationSec.toFixed(1)}s)`, 30);
+        } else if (hvccRel !== -1) {
+            isH265 = true;
+            sampleEntryType = 'hvc1';
+            const hvccStart = hvccRel - 4;
+            const hvccOrigSize = readU32(stsdContent, hvccStart);
+            // Preserve exact hvcC box for HEVC
+            codecBoxNew = data.subarray(vStsd.offset + 8 + hvccStart, vStsd.offset + 8 + hvccStart + hvccOrigSize);
+            log(`Tìm thấy video H.265/HEVC: ${origFrames} frames (${(origFrames / vDurationSec).toFixed(0)} fps, ${vDurationSec.toFixed(1)}s)`, 30);
+        } else {
+            throw new Error("Không tìm thấy chuẩn H.264 (avcC) hoặc H.265 (hvcC) trong video. Vui lòng chọn chế độ 'Nén giảm dung lượng' để chuyển đổi!");
+        }
 
         let colrBox = new Uint8Array(0);
         for (let i = 0; i < stsdContent.length - 4; i++) {
@@ -497,7 +523,7 @@
         }
 
         const btrtNew = buildBtrt(0, maxBr, newVAvgBr);
-        const videoStsdNew = buildStsdVideo(avc1Fixed, avccNew, colrBox, paspBox, btrtNew);
+        const videoStsdNew = buildStsdVideo(visualFixed, codecBoxNew, colrBox, paspBox, btrtNew, sampleEntryType);
 
         // Video Tkhd: track_id = 1, alternate_group = 0
         const vTkhdBoxOrig = data.subarray(vtStart, vtStart + readU32(data, vtStart));
@@ -656,7 +682,7 @@
 
         // 4. FASTSTART CONTAINER LAYOUT & OFFSET CALCULATION
         log("Tính toán FastStart: Đưa moov lên đầu & tính bù stco chunk offsets...", 75);
-        const ftyp = buildFtyp();
+        const ftyp = buildFtyp(isH265);
         const free = buildFree();
         const mvhd = buildMvhdV1(1000, 4);
         const udta = UDTA_HAZE;
