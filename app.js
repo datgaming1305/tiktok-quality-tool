@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedFile = null;
     let selectedMode = 'instant'; // 'instant' or 'compress'
     let ffmpegInstance = null;
+    let currentVideoDurationSec = 0;
+    let currentTargetBitrate = 3500;
 
     // DOM Elements
     const dropzone = document.getElementById('dropzone');
@@ -188,8 +190,28 @@ document.addEventListener('DOMContentLoaded', () => {
         finishProcessing(file, outputBytes);
     }
 
+    function getVideoDuration(file) {
+        return new Promise((resolve) => {
+            const tempVideo = document.createElement('video');
+            tempVideo.preload = 'metadata';
+            const url = URL.createObjectURL(file);
+            tempVideo.onloadedmetadata = () => {
+                URL.revokeObjectURL(url);
+                resolve(tempVideo.duration || 0);
+            };
+            tempVideo.onerror = () => {
+                URL.revokeObjectURL(url);
+                resolve(0);
+            };
+            tempVideo.src = url;
+        });
+    }
+
     async function processCompressMode(file, targetBitrate) {
         updateProgress("Đang khởi tạo FFmpeg WebAssembly...", 5);
+
+        currentVideoDurationSec = await getVideoDuration(file);
+        currentTargetBitrate = targetBitrate;
 
         if (!ffmpegInstance) {
             const { FFmpeg } = window.FFmpegWASM;
@@ -199,11 +221,23 @@ document.addEventListener('DOMContentLoaded', () => {
             ffmpegInstance.on('log', ({ message }) => {
                 logTerminal(`[ffmpeg] ${message}`);
             });
-            ffmpegInstance.on('progress', ({ progress }) => {
-                const pct = Math.min(80, Math.round(15 + progress * 65));
-                progressBar.style.width = `${pct}%`;
-                progressPercent.textContent = `${pct}%`;
-                progressText.textContent = `Đang nén video về ${targetBitrate.toLocaleString()} kbps (${(progress * 100).toFixed(0)}%)...`;
+            ffmpegInstance.on('progress', ({ progress, time }) => {
+                let ratio = 0;
+                // Nếu progress hợp lệ (từ 0.0 đến 1.0)
+                if (typeof progress === 'number' && !isNaN(progress) && progress >= 0 && progress <= 1) {
+                    ratio = progress;
+                } else if (typeof time === 'number' && currentVideoDurationSec > 0) {
+                    // time là microseconds (10^-6 giây)
+                    const currentTimeSec = time / 1000000;
+                    ratio = Math.max(0, Math.min(1, currentTimeSec / currentVideoDurationSec));
+                }
+
+                const subPct = Math.round(ratio * 100);
+                const overallPct = Math.min(80, Math.round(15 + ratio * 65));
+
+                progressBar.style.width = `${overallPct}%`;
+                progressPercent.textContent = `${overallPct}%`;
+                progressText.textContent = `Đang nén video về ${currentTargetBitrate.toLocaleString()} kbps (${subPct}%)...`;
             });
 
             const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
