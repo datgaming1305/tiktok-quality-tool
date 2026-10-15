@@ -1,6 +1,7 @@
 /**
- * TikTok Quality Bypass Engine (Pure JavaScript / WebAssembly Client-Side)
+ * TikTok Quality Bypass Engine (Pure JavaScript Client-Side)
  * ISO Base Media File Format (MP4) Container Optimization & FastStart
+ * Implements 100% Haze Quality Method (Clean Video Track + Track 3 Audio Padding x10)
  */
 
 (function (root, factory) {
@@ -13,9 +14,18 @@
     }
 }(typeof self !== 'undefined' ? self : this, function () {
 
-    const PADDING_SIZE = 8;
-    const PADDING_NAL = new Uint8Array([0, 0, 0, 4, 0, 0, 0, 0]); // 8-byte dummy NAL unit
-    const KEEP_NALU_TYPES = new Set([1, 5]); // Non-IDR & IDR slice
+    const PADDING_NAL = new Uint8Array([0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]); // 8-byte dummy
+    const SILENT_AAC = new Uint8Array([0x21, 0x10, 0x04, 0x60, 0x8c, 0x1c]); // 6-byte silent AAC frame
+    const UDTA_HAZE = new Uint8Array([
+        0, 0, 0, 127, 117, 100, 116, 97, 0, 0, 0, 119, 109, 101, 116, 97,
+        0, 0, 0, 0, 0, 0, 0, 33, 104, 100, 108, 114, 0, 0, 0, 0,
+        0, 0, 0, 0, 109, 100, 105, 114, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 74, 105, 108, 115, 116, 0, 0, 0,
+        66, 169, 116, 111, 111, 0, 0, 0, 58, 100, 97, 116, 97, 0, 0, 0,
+        1, 0, 0, 0, 0, 72, 97, 122, 101, 32, 81, 117, 97, 108, 105, 116,
+        121, 32, 77, 101, 116, 104, 111, 100, 32, 104, 116, 116, 112, 115, 58, 47,
+        47, 104, 97, 122, 101, 109, 101, 116, 104, 111, 100, 46, 120, 121, 122
+    ]);
 
     function readU16(bytes, offset) {
         return (bytes[offset] << 8) | bytes[offset + 1];
@@ -39,6 +49,13 @@
         bytes[offset + 1] = (value >>> 16) & 0xFF;
         bytes[offset + 2] = (value >>> 8) & 0xFF;
         bytes[offset + 3] = value & 0xFF;
+    }
+
+    function writeU64(bytes, offset, value) {
+        const hi = Math.floor(value / 4294967296);
+        const lo = value % 4294967296;
+        writeU32(bytes, offset, hi);
+        writeU32(bytes, offset + 4, lo);
     }
 
     function concatBytes(...arrays) {
@@ -109,7 +126,7 @@
             pos += size;
         }
 
-        // Quét dự phòng (fallback) theo byte signature
+        // Quét signature fallback
         for (let i = start; i + 8 <= end; i++) {
             if (data[i + 4] === b0 && data[i + 5] === b1 && data[i + 6] === b2 && data[i + 7] === b3) {
                 let size = readU32(data, i);
@@ -199,19 +216,6 @@
         return out;
     }
 
-    function parseStsc(data, offset) {
-        const count = readU32(data, offset + 12);
-        const out = [];
-        for (let i = 0; i < count; i++) {
-            out.push({
-                firstChunk: readU32(data, offset + 16 + i * 12),
-                samplesPerChunk: readU32(data, offset + 20 + i * 12),
-                descIdx: readU32(data, offset + 24 + i * 12)
-            });
-        }
-        return out;
-    }
-
     function parseStts(data, offset) {
         const count = readU32(data, offset + 12);
         const out = [];
@@ -222,23 +226,6 @@
             });
         }
         return out;
-    }
-
-    function parseNalus(sampleBytes) {
-        const nalus = [];
-        let pos = 0;
-        while (pos + 4 <= sampleBytes.length) {
-            const naluLen = readU32(sampleBytes, pos);
-            if (pos + 4 + naluLen > sampleBytes.length) break;
-            const naluType = sampleBytes[pos + 4] & 0x1F;
-            nalus.push({
-                type: naluType,
-                length: naluLen,
-                data: sampleBytes.subarray(pos, pos + 4 + naluLen)
-            });
-            pos += 4 + naluLen;
-        }
-        return nalus;
     }
 
     function buildFtyp() {
@@ -265,14 +252,8 @@
     }
 
     function buildAvcc(origContent) {
-        // Upgrade to High Profile (0x64) and append High profile extensions
-        const payload = new Uint8Array(origContent.length + 4);
-        payload.set(origContent, 0);
-        payload[1] = 0x64; // profile_idc = High Profile (100 = 0x64)
-        payload[payload.length - 4] = 0xFD;
-        payload[payload.length - 3] = 0xF8;
-        payload[payload.length - 2] = 0xF8;
-        payload[payload.length - 1] = 0x00;
+        const payload = new Uint8Array(origContent);
+        payload[1] = 0x64; // High Profile (100 = 0x64)
         return buildBox('avcC', payload);
     }
 
@@ -287,7 +268,7 @@
 
     function buildStts(entries) {
         const payload = new Uint8Array(8 + entries.length * 8);
-        writeU32(payload, 0, 0); // version/flags
+        writeU32(payload, 0, 0);
         writeU32(payload, 4, entries.length);
         for (let i = 0; i < entries.length; i++) {
             writeU32(payload, 8 + i * 8, entries[i].sampleCount);
@@ -311,8 +292,8 @@
     function buildStsz(sampleSizes) {
         const count = sampleSizes.length;
         const payload = new Uint8Array(12 + count * 4);
-        writeU32(payload, 0, 0); // version/flags
-        writeU32(payload, 4, 0); // uniform size = 0
+        writeU32(payload, 0, 0);
+        writeU32(payload, 4, 0);
         writeU32(payload, 8, count);
         for (let i = 0; i < count; i++) {
             writeU32(payload, 12 + i * 4, sampleSizes[i]);
@@ -369,16 +350,44 @@
         return buildBox('mdhd', payload);
     }
 
-    function buildTkhd(origBoxBytes, newDurationMs) {
+    function updateTkhd(origBoxBytes, newTrackId, newDurationMs, newAltGroup) {
         const out = new Uint8Array(origBoxBytes);
-        if (newDurationMs !== undefined) {
-            writeU32(out, 28, newDurationMs);
+        const ver = out[8];
+        if (ver === 0) {
+            if (newTrackId !== undefined) writeU32(out, 20, newTrackId);
+            if (newDurationMs !== undefined) writeU32(out, 28, newDurationMs);
+            if (newAltGroup !== undefined) {
+                out[42] = (newAltGroup >> 8) & 0xFF;
+                out[43] = newAltGroup & 0xFF;
+            }
+        } else {
+            if (newTrackId !== undefined) writeU32(out, 28, newTrackId);
+            if (newDurationMs !== undefined) {
+                writeU32(out, 36, 0);
+                writeU32(out, 40, newDurationMs);
+            }
+            if (newAltGroup !== undefined) {
+                out[54] = (newAltGroup >> 8) & 0xFF;
+                out[55] = newAltGroup & 0xFF;
+            }
         }
         return out;
     }
 
+    function buildElst(durationMs) {
+        const elstPayload = new Uint8Array(20);
+        writeU32(elstPayload, 0, 0); // version/flags
+        writeU32(elstPayload, 4, 1); // entry count = 1
+        writeU32(elstPayload, 8, durationMs); // segment duration
+        writeU32(elstPayload, 12, 0); // media time
+        writeU32(elstPayload, 16, 0x00010000); // media rate 1.0
+        const elstBox = buildBox('elst', elstPayload);
+        return buildBox('edts', elstBox);
+    }
+
     /**
      * Main transformation function
+     * Transforms MP4 to 100% exact Haze Quality Method structure
      * @param {Uint8Array} data
      * @param {Object} options
      * @param {Function} onProgress
@@ -391,189 +400,55 @@
         };
 
         log("Đang phân tích cấu trúc Atom MP4...", 10);
-
         const moovBox = findBox(data, 'moov');
         const mdatBox = findBox(data, 'mdat');
         if (!moovBox || !mdatBox) {
-            throw new Error("Không thể phân tích cấu trúc video (không tìm thấy moov/mdat). Bạn hãy chọn chế độ 'Nén giảm dung lượng' để hệ thống tự động chuẩn hóa video này.");
+            throw new Error("Không thể phân tích cấu trúc video (không tìm thấy moov/mdat). Bạn hãy chọn chế độ 'Nén giảm dung lượng' để chuẩn hóa video này.");
         }
 
-        const mdatDataStart = mdatBox.offset + (mdatBox.headerLen || 8);
+        const origMdatDataStart = mdatBox.offset + (mdatBox.headerLen || 8);
+        const origMdatPayloadLen = mdatBox.size - (mdatBox.headerLen || 8);
 
-        // Video track
+        // 1. VIDEO TRACK (TRACK 1 - 100% Frame gốc nguyên bản)
+        log("Tối ưu hóa Video Track (bảo toàn 100% frame gốc, 60fps mượt mà)...", 20);
         const vt = findTrackByHandler(data, moovBox.offset, moovBox.size, 'vide');
         if (!vt) throw new Error("Không tìm thấy luồng Video trong tệp!");
 
         const vtStart = vt.offset + 8;
         const vtEnd = vt.offset + vt.size;
-        const stbl = findBoxPath(data, ['mdia', 'minf', 'stbl'], vtStart, vtEnd);
-        if (!stbl) throw new Error("Không tìm thấy bảng stbl trong luồng Video!");
+        const vStbl = findBoxPath(data, ['mdia', 'minf', 'stbl'], vtStart, vtEnd);
+        if (!vStbl) throw new Error("Không tìm thấy bảng stbl trong luồng Video!");
 
-        const sbStart = stbl.offset + 8;
-        const sbEnd = stbl.offset + stbl.size;
+        const vsbStart = vStbl.offset + 8;
+        const vsbEnd = vStbl.offset + vStbl.size;
 
-        const stco = findBox(data, 'stco', sbStart, sbEnd) || findBox(data, 'co64', sbStart, sbEnd);
-        const stsz = findBox(data, 'stsz', sbStart, sbEnd);
-        const stsc = findBox(data, 'stsc', sbStart, sbEnd);
-        const stts = findBox(data, 'stts', sbStart, sbEnd);
-        const stsd = findBox(data, 'stsd', sbStart, sbEnd);
-        const stss = findBox(data, 'stss', sbStart, sbEnd);
-        const sdtp = findBox(data, 'sdtp', sbStart, sbEnd);
-        const ctts = findBox(data, 'ctts', sbStart, sbEnd);
+        const vStco = findBox(data, 'stco', vsbStart, vsbEnd) || findBox(data, 'co64', vsbStart, vsbEnd);
+        const vStsz = findBox(data, 'stsz', vsbStart, vsbEnd);
+        const vStsc = findBox(data, 'stsc', vsbStart, vsbEnd);
+        const vStts = findBox(data, 'stts', vsbStart, vsbEnd);
+        const vStsd = findBox(data, 'stsd', vsbStart, vsbEnd);
+        const vStss = findBox(data, 'stss', vsbStart, vsbEnd);
+        const vSdtp = findBox(data, 'sdtp', vsbStart, vsbEnd);
+        const vCtts = findBox(data, 'ctts', vsbStart, vsbEnd);
 
-        if (!stco || !stsz || !stsc || !stts || !stsd) {
-            throw new Error("Thiếu các bảng metadata video thiết yếu (stco/co64/stsz/stsc/stts/stsd).");
+        if (!vStco || !vStsz || !vStsc || !vStts || !vStsd) {
+            throw new Error("Thiếu các bảng metadata video thiết yếu.");
         }
 
-        const videoChunks = parseChunkOffsets(data, stco);
-        const videoSizes = parseStsz(data, stsz.offset);
-        const videoStsc = parseStsc(data, stsc.offset);
-        const videoStts = parseStts(data, stts.offset);
-
+        const videoChunks = parseChunkOffsets(data, vStco);
+        const videoSizes = parseStsz(data, vStsz.offset);
         const origFrames = videoSizes.length;
-        const padCount = origFrames * (multiplier - 1);
-        const totalFrames = origFrames + padCount;
 
         const vMdhd = findBoxPath(data, ['mdia', 'mdhd'], vtStart, vtEnd);
         const vTimescale = readU32(data, vMdhd.offset + 20);
         const vDuration = readU32(data, vMdhd.offset + 24);
         const vDurationSec = vDuration / vTimescale;
-
-        // Tính timeDelta trung bình chuẩn theo toàn bộ video (bảo toàn FPS cho cả video VFR)
-        const timeDelta = Math.round(vDuration / origFrames) || videoStts[0].sampleDelta;
-
-        log(`Tìm thấy ${origFrames} frames (${(vTimescale / timeDelta).toFixed(0)} fps, ${vDurationSec.toFixed(1)}s)`, 25);
-
-        // Strip SEI from first sample
-        log("Tối ưu hóa NALU header & gỡ bỏ SEI metadata thừa...", 35);
-        const firstOff = videoChunks[0];
-        const firstSize = videoSizes[0];
-        const firstSample = data.subarray(firstOff, firstOff + firstSize);
-
-        const nalus = parseNalus(firstSample);
-        const kept = [];
-        for (let i = 0; i < nalus.length; i++) {
-            if (KEEP_NALU_TYPES.has(nalus[i].type)) {
-                kept.push(nalus[i].data);
-            }
-        }
-        const newFirst = kept.length > 0 ? concatBytes(...kept) : firstSample;
-        const newFirstSize = newFirst.length;
-        const seiRemoved = firstSize - newFirstSize;
-
-        // Audio track
-        log("Căn chỉnh luồng âm thanh Audio Track...", 45);
-        const at = findTrackByHandler(data, moovBox.offset, moovBox.size, 'soun');
-        const hasAudio = at !== null;
-        let audioChunks = null, audioSizes = null, audioStts = null;
-        let aTimescale = 0, newAudioDur = 0, newAudioDurMs = 0;
-        let newAStts = null;
-        let aStsdBox = null, aStscBox = null, aStszBox = null;
-        let aSgpdBox = new Uint8Array(0), aSbgpBox = new Uint8Array(0);
-        let audioSmhd = null, audioDinf = null, audioTkhd = null, audioEdts = new Uint8Array(0);
-        let aMdhd = null;
-
-        if (hasAudio) {
-            const atStart = at.offset + 8;
-            const atEnd = at.offset + at.size;
-            const aStbl = findBoxPath(data, ['mdia', 'minf', 'stbl'], atStart, atEnd);
-            const aSbStart = aStbl.offset + 8;
-            const aSbEnd = aStbl.offset + aStbl.size;
-
-            const aStco = findBox(data, 'stco', aSbStart, aSbEnd) || findBox(data, 'co64', aSbStart, aSbEnd);
-            const aStsz = findBox(data, 'stsz', aSbStart, aSbEnd);
-            const aStsc = findBox(data, 'stsc', aSbStart, aSbEnd);
-            const aStts = findBox(data, 'stts', aSbStart, aSbEnd);
-            const aStsd = findBox(data, 'stsd', aSbStart, aSbEnd);
-            const aSgpd = findBox(data, 'sgpd', aSbStart, aSbEnd);
-            const aSbgp = findBox(data, 'sbgp', aSbStart, aSbEnd);
-
-            if (!aStco || !aStsz || !aStsc || !aStts || !aStsd) {
-                throw new Error("Thiếu bảng metadata của luồng âm thanh.");
-            }
-
-            audioChunks = parseChunkOffsets(data, aStco);
-            audioSizes = parseStsz(data, aStsz.offset);
-            audioStts = parseStts(data, aStts.offset);
-
-            aMdhd = findBoxPath(data, ['mdia', 'mdhd'], atStart, atEnd);
-            aTimescale = readU32(data, aMdhd.offset + 20);
-
-            const aElst = findBoxPath(data, ['edts', 'elst'], atStart, atEnd);
-            const aElstSegDur = aElst ? readU32(data, aElst.offset + 16) : 0;
-            const aElstMediaTime = aElst ? readU32(data, aElst.offset + 20) : 0;
-
-            newAudioDurMs = aElstSegDur || Math.round(vDurationSec * 1000);
-            newAudioDur = Math.floor(newAudioDurMs * aTimescale / 1000);
-
-            const aDelta = audioStts[0].sampleDelta;
-            const aCount = audioSizes.length;
-            const targetStts = newAudioDur + aElstMediaTime;
-            const mainN = aCount - 1;
-            const lastDelta = targetStts - mainN * aDelta;
-
-            if (lastDelta > 0 && lastDelta <= aDelta) {
-                newAStts = [
-                    { sampleCount: mainN, sampleDelta: aDelta },
-                    { sampleCount: 1, sampleDelta: lastDelta }
-                ];
-            } else {
-                newAStts = audioStts;
-                newAudioDur = readU32(data, aMdhd.offset + 24);
-                newAudioDurMs = Math.floor(newAudioDur * 1000 / aTimescale);
-            }
-
-            // Audio track boxes
-            const aTkhd = findBox(data, 'tkhd', atStart, atEnd);
-            audioTkhd = buildTkhd(data.subarray(aTkhd.offset, aTkhd.offset + aTkhd.size), newAudioDurMs);
-
-            const aEdts = findBox(data, 'edts', atStart, atEnd);
-            if (aEdts) audioEdts = data.subarray(aEdts.offset, aEdts.offset + aEdts.size);
-
-            const aSmhd = findBoxPath(data, ['mdia', 'minf', 'smhd'], atStart, atEnd);
-            audioSmhd = data.subarray(aSmhd.offset, aSmhd.offset + aSmhd.size);
-
-            const aDinf = findBoxPath(data, ['mdia', 'minf', 'dinf'], atStart, atEnd);
-            audioDinf = data.subarray(aDinf.offset, aDinf.offset + aDinf.size);
-
-            aStsdBox = data.subarray(aStsd.offset, aStsd.offset + aStsd.size);
-            aStscBox = data.subarray(aStsc.offset, aStsc.offset + aStsc.size);
-            aStszBox = data.subarray(aStsz.offset, aStsz.offset + aStsz.size);
-            if (aSgpd) aSgpdBox = data.subarray(aSgpd.offset, aSgpd.offset + aSgpd.size);
-            if (aSbgp) aSbgpBox = data.subarray(aSbgp.offset, aSbgp.offset + aSbgp.size);
-        }
-
-        // Build new mdat
-        log("Bơm Ghost Frames NALU x" + multiplier + " vào luồng mdat...", 60);
-        const mdatBefore = data.subarray(mdatDataStart, firstOff);
-        const mdatAfter = data.subarray(firstOff + firstSize, mdatBox.offset + mdatBox.size);
-        const newMdatContent = concatBytes(mdatBefore, newFirst, mdatAfter, PADDING_NAL);
-        const newMdat = buildBox('mdat', newMdatContent);
-
-        // Build new moov
-        log("Nâng cấp avcC High Profile (0x64) & mvhd 64-bit max duration...", 75);
-        const ftyp = buildFtyp();
-        const free = buildFree();
-        const mvhd = buildMvhdV1(1000, 4);
-
-        // Video Track boxes
         const vDurationMs = Math.round(vDurationSec * 1000);
-        const vTkhdBox = buildTkhd(data.subarray(vtStart, vtStart + readU32(data, vtStart)), vDurationMs);
-        const edtsBox = findBox(data, 'edts', vtStart, vtEnd);
-        const videoEdts = edtsBox ? data.subarray(edtsBox.offset, edtsBox.offset + edtsBox.size) : new Uint8Array(0);
-        const videoMdhd = data.subarray(vMdhd.offset, vMdhd.offset + vMdhd.size);
 
-        const vHdlr = findBoxPath(data, ['mdia', 'hdlr'], vtStart, vtEnd);
-        const videoHdlr = data.subarray(vHdlr.offset, vHdlr.offset + vHdlr.size);
+        log(`Tìm thấy ${origFrames} frames (${(origFrames / vDurationSec).toFixed(0)} fps, ${vDurationSec.toFixed(1)}s)`, 30);
 
-        const vmhd = findBoxPath(data, ['mdia', 'minf', 'vmhd'], vtStart, vtEnd);
-        const videoVmhd = data.subarray(vmhd.offset, vmhd.offset + vmhd.size);
-
-        const dinf = findBoxPath(data, ['mdia', 'minf', 'dinf'], vtStart, vtEnd);
-        const videoDinf = data.subarray(dinf.offset, dinf.offset + dinf.size);
-
-        // Video STSD
-        const stsdContent = data.subarray(stsd.offset + 8, stsd.offset + stsd.size);
+        // Nâng cấp AVC High Profile (0x64) + btrt
+        const stsdContent = data.subarray(vStsd.offset + 8, vStsd.offset + vStsd.size);
         const avc1Fixed = stsdContent.subarray(16, 94);
 
         let avccRel = -1;
@@ -584,7 +459,7 @@
             }
         }
         if (avccRel === -1) {
-            throw new Error("Video này không phải chuẩn H.264 (có thể do quay bằng chế độ HEVC/H.265 của điện thoại). Vui lòng chọn chế độ 'Nén giảm dung lượng' để hệ thống tự động chuyển sang chuẩn TikTok!");
+            throw new Error("Video này không phải chuẩn H.264 (avcC). Vui lòng chọn chế độ 'Nén giảm dung lượng' để hệ thống tự động chuyển sang chuẩn TikTok!");
         }
 
         const avccStart = avccRel - 4;
@@ -611,7 +486,6 @@
 
         let totalVBytes = 0;
         for (let i = 0; i < videoSizes.length; i++) totalVBytes += videoSizes[i];
-        totalVBytes = totalVBytes - firstSize + newFirstSize;
         const newVAvgBr = Math.floor(totalVBytes * 8 / vDurationSec);
 
         let maxBr = newVAvgBr;
@@ -625,139 +499,268 @@
         const btrtNew = buildBtrt(0, maxBr, newVAvgBr);
         const videoStsdNew = buildStsdVideo(avc1Fixed, avccNew, colrBox, paspBox, btrtNew);
 
-        // Video Tables (Giữ nguyên toàn bộ stts gốc để video VFR/CFR không bao giờ bị slow-motion)
-        const newSttsEntries = [];
-        for (let i = 0; i < videoStts.length; i++) {
-            newSttsEntries.push(videoStts[i]);
-        }
-        newSttsEntries.push({
-            sampleCount: padCount,
-            sampleDelta: timeDelta
-        });
-        const videoSttsNew = buildStts(newSttsEntries);
+        // Video Tkhd: track_id = 1, alternate_group = 0
+        const vTkhdBoxOrig = data.subarray(vtStart, vtStart + readU32(data, vtStart));
+        const vTkhdNew = updateTkhd(vTkhdBoxOrig, 1, vDurationMs, 0);
 
-        const videoStss = stss ? data.subarray(stss.offset, stss.offset + stss.size) : new Uint8Array(0);
-        const videoSdtp = sdtp ? data.subarray(sdtp.offset, sdtp.offset + sdtp.size) : new Uint8Array(0);
-        const videoCtts = ctts ? data.subarray(ctts.offset, ctts.offset + ctts.size) : new Uint8Array(0);
+        const vEdtsBox = findBox(data, 'edts', vtStart, vtEnd);
+        const videoEdts = vEdtsBox ? data.subarray(vEdtsBox.offset, vEdtsBox.offset + vEdtsBox.size) : new Uint8Array(0);
+        const videoMdhd = data.subarray(vMdhd.offset, vMdhd.offset + vMdhd.size);
 
-        const newStscEntries = [];
-        for (let i = 0; i < videoStsc.length; i++) {
-            newStscEntries.push(videoStsc[i]);
-        }
-        newStscEntries.push({
-            firstChunk: videoChunks.length + 1,
-            samplesPerChunk: 1,
-            descIdx: 1
-        });
-        const videoStscNew = buildStsc(newStscEntries);
+        const vHdlr = findBoxPath(data, ['mdia', 'hdlr'], vtStart, vtEnd);
+        const videoHdlr = data.subarray(vHdlr.offset, vHdlr.offset + vHdlr.size);
 
-        const newSampleSizes = new Uint32Array(totalFrames);
-        newSampleSizes[0] = newFirstSize;
-        for (let i = 1; i < videoSizes.length; i++) {
-            newSampleSizes[i] = videoSizes[i];
-        }
-        for (let i = videoSizes.length; i < totalFrames; i++) {
-            newSampleSizes[i] = PADDING_SIZE;
-        }
-        const videoStszNew = buildStsz(newSampleSizes);
+        const vmhd = findBoxPath(data, ['mdia', 'minf', 'vmhd'], vtStart, vtEnd);
+        const videoVmhd = data.subarray(vmhd.offset, vmhd.offset + vmhd.size);
 
-        // STCO placeholder for sizing
-        const totalVChunks = videoChunks.length + padCount;
-        const stcoPhSize = 16 + totalVChunks * 4;
-        const vStcoPh = new Uint8Array(stcoPhSize);
-        writeU32(vStcoPh, 0, stcoPhSize);
-        vStcoPh[4] = 115; vStcoPh[5] = 116; vStcoPh[6] = 99; vStcoPh[7] = 111; // 'stco'
+        const dinf = findBoxPath(data, ['mdia', 'minf', 'dinf'], vtStart, vtEnd);
+        const videoDinf = data.subarray(dinf.offset, dinf.offset + dinf.size);
 
-        const vStblParts = [videoStsdNew, videoSttsNew];
-        if (videoStss.length > 0) vStblParts.push(videoStss);
-        if (videoSdtp.length > 0) vStblParts.push(videoSdtp);
-        if (videoCtts.length > 0) vStblParts.push(videoCtts);
-        vStblParts.push(videoStscNew, videoStszNew, vStcoPh);
+        // Giữ nguyên 100% bảng stts, stsc, stsz, stss, ctts, sdtp gốc!
+        const videoSttsBox = data.subarray(vStts.offset, vStts.offset + vStts.size);
+        const videoStscBox = data.subarray(vStsc.offset, vStsc.offset + vStsc.size);
+        const videoStszBox = data.subarray(vStsz.offset, vStsz.offset + vStsz.size);
+        const videoStssBox = vStss ? data.subarray(vStss.offset, vStss.offset + vStss.size) : new Uint8Array(0);
+        const videoSdtpBox = vSdtp ? data.subarray(vSdtp.offset, vSdtp.offset + vSdtp.size) : new Uint8Array(0);
+        const videoCttsBox = vCtts ? data.subarray(vCtts.offset, vCtts.offset + vCtts.size) : new Uint8Array(0);
+
+        // Video STCO placeholder
+        const vStcoPhSize = 16 + videoChunks.length * 4;
+        const vStcoPh = new Uint8Array(vStcoPhSize);
+        writeU32(vStcoPh, 0, vStcoPhSize);
+        vStcoPh[4] = 115; vStcoPh[5] = 116; vStcoPh[6] = 99; vStcoPh[7] = 111;
+
+        const vStblParts = [videoStsdNew, videoSttsBox];
+        if (videoStssBox.length > 0) vStblParts.push(videoStssBox);
+        if (videoSdtpBox.length > 0) vStblParts.push(videoSdtpBox);
+        if (videoCttsBox.length > 0) vStblParts.push(videoCttsBox);
+        vStblParts.push(videoStscBox, videoStszBox, vStcoPh);
 
         let videoStbl = buildBox('stbl', concatBytes(...vStblParts));
         let videoMinf = buildBox('minf', concatBytes(videoVmhd, videoDinf, videoStbl));
         let videoMdia = buildBox('mdia', concatBytes(videoMdhd, videoHdlr, videoMinf));
-        let videoTrak = buildBox('trak', concatBytes(vTkhdBox, videoEdts, videoMdia));
+        let videoTrak = buildBox('trak', concatBytes(vTkhdNew, videoEdts, videoMdia));
 
-        // Audio Track
-        let audioTrak = new Uint8Array(0);
-        let aStcoPh = new Uint8Array(0);
-        if (hasAudio) {
-            const aSttsNew = buildStts(newAStts);
-            const aMdhdBox = buildMdhd(data.subarray(aMdhd.offset + 8, aMdhd.offset + aMdhd.size), newAudioDur, 0x55C4);
-            const aHdlrBox = buildHdlr('soun', 'SoundHandler');
-
-            const aStcoPhSize = 16 + audioChunks.length * 4;
-            aStcoPh = new Uint8Array(aStcoPhSize);
-            writeU32(aStcoPh, 0, aStcoPhSize);
-            aStcoPh[4] = 115; aStcoPh[5] = 116; aStcoPh[6] = 99; aStcoPh[7] = 111;
-
-            const aStblParts = [aStsdBox, aSttsNew, aStscBox, aStszBox, aStcoPh];
-            if (aSgpdBox.length > 0) aStblParts.push(aSgpdBox);
-            if (aSbgpBox.length > 0) aStblParts.push(aSbgpBox);
-
-            const audioStbl = buildBox('stbl', concatBytes(...aStblParts));
-            const audioMinf = buildBox('minf', concatBytes(audioSmhd, audioDinf, audioStbl));
-            const audioMdia = buildBox('mdia', concatBytes(aMdhdBox, aHdlrBox, audioMinf));
-            audioTrak = buildBox('trak', concatBytes(audioTkhd, audioEdts, audioMdia));
+        // 2. AUDIO TRACK (TRACK 2 - Genuine Audio)
+        log("Chuẩn hóa luồng Audio Track gốc (Track 2, group 1)...", 45);
+        const at = findTrackByHandler(data, moovBox.offset, moovBox.size, 'soun');
+        if (!at) {
+            throw new Error("Video không có luồng âm thanh. Chuẩn Haze Method yêu cầu video có ít nhất 1 luồng Audio!");
         }
 
-        // FastStart moov calculation
-        log("Tính toán FastStart: Đưa moov lên đầu & tính bù stco chunk offsets...", 85);
-        let moov = buildBox('moov', concatBytes(mvhd, videoTrak, audioTrak));
+        const atStart = at.offset + 8;
+        const atEnd = at.offset + at.size;
+        const aStbl = findBoxPath(data, ['mdia', 'minf', 'stbl'], atStart, atEnd);
+        const asbStart = aStbl.offset + 8;
+        const asbEnd = aStbl.offset + aStbl.size;
+
+        const aStco = findBox(data, 'stco', asbStart, asbEnd) || findBox(data, 'co64', asbStart, asbEnd);
+        const aStsz = findBox(data, 'stsz', asbStart, asbEnd);
+        const aStsc = findBox(data, 'stsc', asbStart, asbEnd);
+        const aStts = findBox(data, 'stts', asbStart, asbEnd);
+        const aStsd = findBox(data, 'stsd', asbStart, asbEnd);
+        const aSgpd = findBox(data, 'sgpd', asbStart, asbEnd);
+        const aSbgp = findBox(data, 'sbgp', asbStart, asbEnd);
+
+        const audioChunks = parseChunkOffsets(data, aStco);
+        const audioSizes = parseStsz(data, aStsz.offset);
+        const audioStts = parseStts(data, aStts.offset);
+
+        const aMdhd = findBoxPath(data, ['mdia', 'mdhd'], atStart, atEnd);
+        const aTimescale = readU32(data, aMdhd.offset + 20);
+        const aDuration = readU32(data, aMdhd.offset + 24);
+        const aDurationMs = Math.round(aDuration * 1000 / aTimescale);
+
+        const aTkhdOrig = data.subarray(atStart, atStart + readU32(data, atStart));
+        const aTkhdNew = updateTkhd(aTkhdOrig, 2, aDurationMs, 1); // track_id = 2, alt_group = 1
+
+        const aEdtsBox = findBox(data, 'edts', atStart, atEnd);
+        const audioEdts = aEdtsBox ? data.subarray(aEdtsBox.offset, aEdtsBox.offset + aEdtsBox.size) : new Uint8Array(0);
+        const audioMdhd = data.subarray(aMdhd.offset, aMdhd.offset + aMdhd.size);
+
+        const aHdlr = findBoxPath(data, ['mdia', 'hdlr'], atStart, atEnd);
+        const audioHdlr = data.subarray(aHdlr.offset, aHdlr.offset + aHdlr.size);
+
+        const aSmhd = findBoxPath(data, ['mdia', 'minf', 'smhd'], atStart, atEnd);
+        const audioSmhd = data.subarray(aSmhd.offset, aSmhd.offset + aSmhd.size);
+
+        const aDinf = findBoxPath(data, ['mdia', 'minf', 'dinf'], atStart, atEnd);
+        const audioDinf = data.subarray(aDinf.offset, aDinf.offset + aDinf.size);
+
+        const aStsdBox = data.subarray(aStsd.offset, aStsd.offset + aStsd.size);
+        const aSttsBox = data.subarray(aStts.offset, aStts.offset + aStts.size);
+        const aStscBox = data.subarray(aStsc.offset, aStsc.offset + aStsc.size);
+        const aStszBox = data.subarray(aStsz.offset, aStsz.offset + aStsz.size);
+        const aSgpdBox = aSgpd ? data.subarray(aSgpd.offset, aSgpd.offset + aSgpd.size) : new Uint8Array(0);
+        const aSbgpBox = aSbgp ? data.subarray(aSbgp.offset, aSbgp.offset + aSbgp.size) : new Uint8Array(0);
+
+        const aStcoPhSize = 16 + audioChunks.length * 4;
+        const aStcoPh = new Uint8Array(aStcoPhSize);
+        writeU32(aStcoPh, 0, aStcoPhSize);
+        aStcoPh[4] = 115; aStcoPh[5] = 116; aStcoPh[6] = 99; aStcoPh[7] = 111;
+
+        const aStblParts = [aStsdBox, aSttsBox, aStscBox, aStszBox, aStcoPh];
+        if (aSgpdBox.length > 0) aStblParts.push(aSgpdBox);
+        if (aSbgpBox.length > 0) aStblParts.push(aSbgpBox);
+
+        let audioStbl = buildBox('stbl', concatBytes(...aStblParts));
+        let audioMinf = buildBox('minf', concatBytes(audioSmhd, audioDinf, audioStbl));
+        let audioMdia = buildBox('mdia', concatBytes(audioMdhd, audioHdlr, audioMinf));
+        let audioTrak = buildBox('trak', concatBytes(aTkhdNew, audioEdts, audioMdia));
+
+        // 3. TRACK 3: AUDIO DUMMY PADDING TRACK (HAZE QUALITY METHOD x10)
+        log(`Tạo Track 3 Audio Padding x${multiplier} (chuẩn Haze Method)...`, 60);
+        const A = audioSizes.length;
+        const padSamples = A * (multiplier - 1);
+        const totalSamples = A + padSamples;
+        const aDelta = audioStts[0].sampleDelta || 1024;
+
+        const t3SttsEntries = [
+            { sampleCount: A, sampleDelta: aDelta },
+            { sampleCount: padSamples, sampleDelta: 1 }
+        ];
+        const t3SttsBox = buildStts(t3SttsEntries);
+
+        const t3StscEntries = [
+            { firstChunk: 1, samplesPerChunk: 1, descIdx: 1 },
+            { firstChunk: A, samplesPerChunk: 1 + padSamples, descIdx: 1 }
+        ];
+        const t3StscBox = buildStsc(t3StscEntries);
+
+        const t3Sizes = new Uint32Array(totalSamples);
+        for (let i = 0; i < A; i++) t3Sizes[i] = 6; // 6-byte silent AAC frame
+        for (let i = A; i < totalSamples; i++) t3Sizes[i] = 8; // 8-byte dummy unit
+        const t3StszBox = buildStsz(t3Sizes);
+
+        const t3Dur = A * aDelta + padSamples * 1;
+        const t3DurMs = Math.round(t3Dur * 1000 / aTimescale);
+
+        const t3TkhdBox = updateTkhd(aTkhdOrig, 3, t3DurMs, 2); // track_id = 3, alt_group = 2
+        const t3MdhdBox = buildMdhd(data.subarray(aMdhd.offset + 8, aMdhd.offset + aMdhd.size), t3Dur, 0x55C4);
+        const t3EdtsBox = buildElst(t3DurMs);
+        const t3HdlrBox = buildHdlr('soun', 'SoundHandler');
+
+        const t3StcoPhSize = 16 + A * 4;
+        const t3StcoPh = new Uint8Array(t3StcoPhSize);
+        writeU32(t3StcoPh, 0, t3StcoPhSize);
+        t3StcoPh[4] = 115; t3StcoPh[5] = 116; t3StcoPh[6] = 99; t3StcoPh[7] = 111;
+
+        const t3StblParts = [aStsdBox, t3SttsBox, t3StscBox, t3StszBox, t3StcoPh];
+        if (aSgpdBox.length > 0) t3StblParts.push(aSgpdBox);
+        if (aSbgpBox.length > 0) t3StblParts.push(aSbgpBox);
+
+        let t3Stbl = buildBox('stbl', concatBytes(...t3StblParts));
+        let t3Minf = buildBox('minf', concatBytes(audioSmhd, audioDinf, t3Stbl));
+        let t3Mdia = buildBox('mdia', concatBytes(t3MdhdBox, t3HdlrBox, t3Minf));
+        let t3Trak = buildBox('trak', concatBytes(t3TkhdBox, t3EdtsBox, t3Mdia));
+
+        // 4. FASTSTART CONTAINER LAYOUT & OFFSET CALCULATION
+        log("Tính toán FastStart: Đưa moov lên đầu & tính bù stco chunk offsets...", 75);
+        const ftyp = buildFtyp();
+        const free = buildFree();
+        const mvhd = buildMvhdV1(1000, 4);
+        const udta = UDTA_HAZE;
+
+        let moov = buildBox('moov', concatBytes(mvhd, videoTrak, audioTrak, t3Trak, udta));
         const moovSizeFinal = moov.length;
 
-        const newMdatStart = ftyp.length + free.length + moovSizeFinal + 8;
-        const firstVideoRel = firstOff - mdatDataStart;
-        const padAbs = newMdatStart + newMdatContent.length - PADDING_SIZE;
+        const track3PayloadLen = A * 6 + padSamples * 8;
+        const newMdatPayloadLen = origMdatPayloadLen + track3PayloadLen;
 
-        const newVOffsets = new Uint32Array(totalVChunks);
+        const is64Mdat = (8 + newMdatPayloadLen > 0xFFFFFFFF);
+        const newMdatHeaderLen = is64Mdat ? 16 : 8;
+
+        // Cấu trúc FastStart: ftyp -> moov -> free -> mdat
+        const newMdatDataStart = ftyp.length + moovSizeFinal + free.length + newMdatHeaderLen;
+
+        // Video STCO offsets
+        const newVOffsets = new Uint32Array(videoChunks.length);
         for (let i = 0; i < videoChunks.length; i++) {
-            const rel = videoChunks[i] - mdatDataStart;
-            newVOffsets[i] = (rel <= firstVideoRel)
-                ? (newMdatStart + rel)
-                : (newMdatStart + rel - seiRemoved);
-        }
-        for (let i = videoChunks.length; i < totalVChunks; i++) {
-            newVOffsets[i] = padAbs;
+            const rel = videoChunks[i] - origMdatDataStart;
+            newVOffsets[i] = newMdatDataStart + rel;
         }
 
-        // Rebuild with real STCO offsets
+        // Audio STCO offsets (Track 2)
+        const newAOffsets = new Uint32Array(audioChunks.length);
+        for (let i = 0; i < audioChunks.length; i++) {
+            const rel = audioChunks[i] - origMdatDataStart;
+            newAOffsets[i] = newMdatDataStart + rel;
+        }
+
+        // Track 3 STCO offsets (Track 3)
+        const t3StartOffset = newMdatDataStart + origMdatPayloadLen;
+        const newT3Offsets = new Uint32Array(A);
+        for (let i = 0; i < A; i++) {
+            newT3Offsets[i] = t3StartOffset + i * 6;
+        }
+
+        // Rebuild Video Trak with real STCO
         vStblParts[vStblParts.length - 1] = buildStco(newVOffsets);
         videoStbl = buildBox('stbl', concatBytes(...vStblParts));
         videoMinf = buildBox('minf', concatBytes(videoVmhd, videoDinf, videoStbl));
         videoMdia = buildBox('mdia', concatBytes(videoMdhd, videoHdlr, videoMinf));
-        videoTrak = buildBox('trak', concatBytes(vTkhdBox, videoEdts, videoMdia));
+        videoTrak = buildBox('trak', concatBytes(vTkhdNew, videoEdts, videoMdia));
 
-        if (hasAudio) {
-            const newAOffsets = new Uint32Array(audioChunks.length);
-            for (let i = 0; i < audioChunks.length; i++) {
-                const rel = audioChunks[i] - mdatDataStart;
-                newAOffsets[i] = (rel < firstVideoRel)
-                    ? (newMdatStart + rel)
-                    : (newMdatStart + rel - seiRemoved);
-            }
-            const aSttsNew = buildStts(newAStts);
-            const aMdhdBox = buildMdhd(data.subarray(aMdhd.offset + 8, aMdhd.offset + aMdhd.size), newAudioDur, 0x55C4);
-            const aHdlrBox = buildHdlr('soun', 'SoundHandler');
+        // Rebuild Audio Trak (Track 2) with real STCO
+        aStblParts[4] = buildStco(newAOffsets);
+        audioStbl = buildBox('stbl', concatBytes(...aStblParts));
+        audioMinf = buildBox('minf', concatBytes(audioSmhd, audioDinf, audioStbl));
+        audioMdia = buildBox('mdia', concatBytes(audioMdhd, audioHdlr, audioMinf));
+        audioTrak = buildBox('trak', concatBytes(aTkhdNew, audioEdts, audioMdia));
 
-            const aStblParts = [aStsdBox, aSttsNew, aStscBox, aStszBox, buildStco(newAOffsets)];
-            if (aSgpdBox.length > 0) aStblParts.push(aSgpdBox);
-            if (aSbgpBox.length > 0) aStblParts.push(aSbgpBox);
+        // Rebuild Track 3 with real STCO
+        t3StblParts[4] = buildStco(newT3Offsets);
+        t3Stbl = buildBox('stbl', concatBytes(...t3StblParts));
+        t3Minf = buildBox('minf', concatBytes(audioSmhd, audioDinf, t3Stbl));
+        t3Mdia = buildBox('mdia', concatBytes(t3MdhdBox, t3HdlrBox, t3Minf));
+        t3Trak = buildBox('trak', concatBytes(t3TkhdBox, t3EdtsBox, t3Mdia));
 
-            const audioStbl = buildBox('stbl', concatBytes(...aStblParts));
-            const audioMinf = buildBox('minf', concatBytes(audioSmhd, audioDinf, audioStbl));
-            const audioMdia = buildBox('mdia', concatBytes(aMdhdBox, aHdlrBox, audioMinf));
-            audioTrak = buildBox('trak', concatBytes(audioTkhd, audioEdts, audioMdia));
-        }
-
-        moov = buildBox('moov', concatBytes(mvhd, videoTrak, audioTrak));
+        moov = buildBox('moov', concatBytes(mvhd, videoTrak, audioTrak, t3Trak, udta));
         if (moov.length !== moovSizeFinal) {
-            console.warn(`moov size shifted: was ${moovSizeFinal}, now ${moov.length}`);
+            throw new Error(`Kích thước moov bị lệch: dự kiến ${moovSizeFinal}, thực tế ${moov.length}`);
         }
 
-        log("Hoàn tất tối ưu hóa container MP4!", 100);
-        return concatBytes(ftyp, free, moov, newMdat);
+        // 5. ASSEMBLE OUTPUT FILE
+        log("Ghi tệp MP4 tối ưu hóa hoàn chỉnh...", 85);
+        const totalFileSize = ftyp.length + moov.length + free.length + newMdatHeaderLen + newMdatPayloadLen;
+
+        const out = new Uint8Array(totalFileSize);
+        let cur = 0;
+
+        out.set(ftyp, cur); cur += ftyp.length;
+        out.set(moov, cur); cur += moov.length;
+        out.set(free, cur); cur += free.length;
+
+        // Write mdat header
+        if (!is64Mdat) {
+            writeU32(out, cur, 8 + newMdatPayloadLen);
+            out[cur + 4] = 109; out[cur + 5] = 100; out[cur + 6] = 97; out[cur + 7] = 116; // 'mdat'
+            cur += 8;
+        } else {
+            writeU32(out, cur, 1);
+            out[cur + 4] = 109; out[cur + 5] = 100; out[cur + 6] = 97; out[cur + 7] = 116;
+            writeU64(out, cur + 8, 16 + newMdatPayloadLen);
+            cur += 16;
+        }
+
+        // Copy original mdat payload
+        out.set(data.subarray(origMdatDataStart, origMdatDataStart + origMdatPayloadLen), cur);
+        cur += origMdatPayloadLen;
+
+        // Append Track 3 silent frames (A * 6)
+        for (let i = 0; i < A; i++) {
+            out.set(SILENT_AAC, cur);
+            cur += 6;
+        }
+
+        // Append Track 3 dummy units (padSamples * 8)
+        for (let i = 0; i < padSamples; i++) {
+            out.set(PADDING_NAL, cur);
+            cur += 8;
+        }
+
+        log("Hoàn tất tối ưu hóa container MP4 chuẩn Haze Method!", 100);
+        return out;
     }
 
     return {
