@@ -52,73 +52,22 @@
         <button id="btnRemoveFile" class="btn-remove" title="Hủy chọn">✕</button>
       </div>
 
-      <!-- Processing Modes -->
-      <div class="options-grid">
-        <div id="modeInstant" class="mode-option active">
+      <!-- Processing Mode: Giữ 100% Bitrate Gốc -->
+      <div class="options-grid" style="grid-template-columns: 1fr;">
+        <div id="modeInstant" class="mode-option active" style="cursor: default;">
           <div class="mode-header">
-            <span>Tối ưu nhanh</span>
-            <span class="tag-recommend">Khuyến nghị</span>
+            <span>Bảo Toàn Bitrate Gốc & Chuẩn Hóa FastStart</span>
+            <span class="tag-recommend">Khuyến nghị 100%</span>
           </div>
           <div class="mode-desc">
-            Xử lý siêu tốc trong 1 giây, giữ nguyên 100% độ nét và âm thanh gốc của video.
+            Giữ trọn vẹn 100% khung hình và bitrate gốc của clip (Zero Re-encode). Đưa moov lên đầu (FastStart 0.1s), chuẩn hóa FourCC hvc1/avc1 và bảo toàn thời lượng thực tế (khắc phục 100% lỗi tua video).
           </div>
-        </div>
-
-        <div id="modeCompress" class="mode-option">
-          <div class="mode-header">
-            <span>Nén giảm dung lượng</span>
-            <span class="tag-custom">Tùy chỉnh</span>
-          </div>
-          <div class="mode-desc">
-            Nén video về mức bitrate mong muốn giúp clip nhẹ hơn trước khi tải lên.
-          </div>
-        </div>
-      </div>
-
-      <!-- Dedicated Bitrate Configuration Panel (Hiển thị rõ ràng khi chọn Nén lại bitrate) -->
-      <div id="bitrateConfigCard" class="bitrate-config-card" style="display: none;">
-        <div class="bitrate-config-header">
-          <strong>Cấu hình Bitrate mục tiêu:</strong>
-          <span class="bitrate-config-hint">Nhập số hoặc chọn nhanh mức thông dụng</span>
-        </div>
-        <div class="bitrate-control-row">
-          <div class="bitrate-input-box">
-            <input type="number" id="customBitrateInput" value="3500" min="1000" max="60000" step="500">
-            <span class="unit-label">kbps</span>
-          </div>
-          <div class="bitrate-preset-pills">
-            <button type="button" class="preset-pill" data-val="2500">2,500</button>
-            <button type="button" class="preset-pill active" data-val="3500">3,500</button>
-            <button type="button" class="preset-pill" data-val="5000">5,000</button>
-            <button type="button" class="preset-pill" data-val="8000">8,000</button>
-            <button type="button" class="preset-pill" data-val="12000">12,000</button>
-            <button type="button" class="preset-pill" data-val="14000">14,000</button>
-            <button type="button" class="preset-pill" data-val="16000">16,000</button>
-          </div>
-        </div>
-        <div class="filter-options-row">
-          <label class="filter-toggle-label">
-            <input type="checkbox" id="denoiseToggle" checked>
-            <span class="filter-checkbox-custom"></span>
-            <span class="filter-text">
-              <strong>Khử nhiễu thông minh (Denoise)</strong>
-              <small>Lọc sạch hạt noise và nhiễu viền trước khi nén</small>
-            </span>
-          </label>
-          <label class="filter-toggle-label">
-            <input type="checkbox" id="sharpenToggle" checked>
-            <span class="filter-checkbox-custom"></span>
-            <span class="filter-text">
-              <strong>Làm nét viền (Sharpen)</strong>
-              <small>Tăng cường chi tiết viền để giữ độ trong và sắc nét</small>
-            </span>
-          </label>
         </div>
       </div>
 
       <!-- Action Button -->
       <button id="btnProcess" class="btn-primary" disabled>
-        <span>Bắt đầu xử lý</span>
+        <span>Bắt đầu tối ưu video (Giữ nguyên độ nét gốc)</span>
       </button>
 
       <!-- Progress Section -->
@@ -159,6 +108,24 @@
         <span>Tải video (.mp4)</span>
       </a>
     </div>
+
+    <!-- Userscript Helper Card -->
+    <section class="glass-card helper-section" style="margin-top: 24px; padding: 20px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(254, 44, 85, 0.15); display: flex; align-items: center; justify-content: center; color: var(--tiktok-red);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          </div>
+          <div>
+            <div style="font-weight: 700; font-size: 15px; color: #fff;">Tiện ích chống nén TikTok Studio Web (Userscript)</div>
+            <div style="font-size: 13px; color: var(--text-dim); margin-top: 2px;">Tự động tắt bộ nén Cloud Canvas khi đăng video trên TikTok Studio, bảo toàn chất lượng gốc.</div>
+          </div>
+        </div>
+        <a href="tiktok-studio-helper.user.js" class="btn-download" style="padding: 8px 16px; font-size: 13px; text-decoration: none; border-radius: 8px; white-space: nowrap;" download>
+          <span>Tải / Cài Script (Tampermonkey)</span>
+        </a>
+      </div>
+    </section>
 
     <!-- TikTok Guidelines Grid (Chuẩn theo bảng thông số TikTok) -->
     <section class="glass-card guidelines-section">
@@ -223,10 +190,8 @@
     </section>
   </div>
 
-  <!-- Scripts (Vendor FFmpeg local for same-origin Web Worker support) -->
-  <script src="vendor/util.js?v=3.1"></script>
-  <script src="vendor/ffmpeg.js?v=3.1"></script>
-  <script src="tiktok-bypass.js?v=3.1"></script>
-  <script src="app.js?v=3.1"></script>
+  <!-- Scripts -->
+  <script src="tiktok-bypass.js?v=4.0"></script>
+  <script src="app.js?v=4.0"></script>
 </body>
 </html>
