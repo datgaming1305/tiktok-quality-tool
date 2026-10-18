@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const originalBase = origFile.name.replace(/\.[^/.]+$/, "");
         btnDownload.href = downloadUrl;
-        btnDownload.download = `${originalBase}_tiktok_clean_faststart.mp4`;
+        btnDownload.download = `${originalBase}-optimize.mp4`;
 
         resultCard.style.display = 'block';
         btnProcess.disabled = false;
