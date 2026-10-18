@@ -52,22 +52,34 @@
         <button id="btnRemoveFile" class="btn-remove" title="Hủy chọn">✕</button>
       </div>
 
-      <!-- Processing Mode: Giữ 100% Bitrate Gốc -->
+      <!-- Processing Mode: Tối ưu thông minh chuẩn TikQuick -->
       <div class="options-grid" style="grid-template-columns: 1fr;">
         <div id="modeInstant" class="mode-option active" style="cursor: default;">
           <div class="mode-header">
-            <span>Bảo Toàn Bitrate Gốc & Chuẩn Hóa FastStart</span>
+            <span>Tự Động Tối Ưu Thông Minh (Chuẩn TikQuick Safe Cap)</span>
             <span class="tag-recommend">Khuyến nghị 100%</span>
           </div>
           <div class="mode-desc">
-            Giữ trọn vẹn 100% khung hình và bitrate gốc của clip (Zero Re-encode). Đưa moov lên đầu (FastStart 0.1s), chuẩn hóa FourCC hvc1/avc1 và bảo toàn thời lượng thực tế (khắc phục 100% lỗi tua video).
+            Tự động tính toán dung lượng an toàn theo thuật toán của TikQuick:
+            <br>• Nếu video dưới trần an toàn TikTok: Giữ nguyên 100% bitrate gốc, xử lý tức thì (0.1s).
+            <br>• Nếu video vượt trần an toàn TikTok: Tự động hạ nhẹ bitrate về mức tối ưu an toàn nhất để tránh bị thuật toán máy chủ TikTok nén đè làm mờ vỡ hình.
+          </div>
+          <div id="smartCapStatus" style="display: none; margin-top: 12px; padding: 12px 14px; background: rgba(0, 242, 234, 0.08); border: 1px solid rgba(0, 242, 234, 0.25); border-radius: 8px; font-size: 13px; line-height: 1.5; color: #e0f2fe;">
           </div>
         </div>
       </div>
 
+      <!-- Toggle Ép buộc giữ 100% Bitrate gốc -->
+      <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08);">
+        <label for="forcePassthroughToggle" style="cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-secondary); user-select: none;">
+          <input type="checkbox" id="forcePassthroughToggle" style="accent-color: var(--tiktok-cyan); width: 16px; height: 16px; cursor: pointer;">
+          <span>Ép buộc giữ 100% bitrate gốc trong mọi trường hợp (Không nén lại dù vượt trần)</span>
+        </label>
+      </div>
+
       <!-- Action Button -->
-      <button id="btnProcess" class="btn-primary" disabled>
-        <span>Bắt đầu tối ưu video (Giữ nguyên độ nét gốc)</span>
+      <button id="btnProcess" class="btn-primary" disabled style="margin-top: 14px;">
+        <span>Bắt đầu tối ưu video</span>
       </button>
 
       <!-- Progress Section -->
@@ -190,8 +202,10 @@
     </section>
   </div>
 
-  <!-- Scripts -->
-  <script src="tiktok-bypass.js?v=4.0"></script>
-  <script src="app.js?v=4.0"></script>
+  <!-- Scripts (Vendor FFmpeg local for same-origin Web Worker support) -->
+  <script src="vendor/util.js?v=4.2"></script>
+  <script src="vendor/ffmpeg.js?v=4.2"></script>
+  <script src="tiktok-bypass.js?v=4.2"></script>
+  <script src="app.js?v=4.2"></script>
 </body>
 </html>
