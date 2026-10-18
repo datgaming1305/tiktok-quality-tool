@@ -146,19 +146,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isForced) {
             smartCapStatus.innerHTML = `
-                <div style="font-weight: 600; color: #ffeb3b; margin-bottom: 4px;">⚡ Đã bật ép giữ 100% Bitrate gốc:</div>
+                <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #ffeb3b; margin-bottom: 6px;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffeb3b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    <span>Đã bật ép giữ 100% Bitrate gốc</span>
+                </div>
                 <div>Thời lượng: <strong>${durStr}</strong> | Dung lượng: <strong>${sizeStr}</strong>. Sẽ bảo toàn 100% khung hình và bitrate gốc, không nén lại dù vượt trần an toàn.</div>
             `;
         } else if (isExceeded) {
             const targetKbps = calculateSafeBitrate(duration, threshold);
             smartCapStatus.innerHTML = `
-                <div style="font-weight: 600; color: #25f4ee; margin-bottom: 4px;">⚠️ Vượt trần an toàn TikTok: Tự động hạ nhẹ Bitrate (Chuẩn TikQuick)</div>
+                <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #25f4ee; margin-bottom: 6px;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#25f4ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                    <span>Vượt trần an toàn TikTok: Tự động hạ nhẹ Bitrate (Chuẩn TikQuick)</span>
+                </div>
                 <div>Thời lượng: <strong>${durStr}</strong> | Dung lượng: <strong>${sizeStr}</strong> (Trần an toàn: <strong>${threshStr}</strong>).</div>
                 <div style="margin-top: 4px; font-size: 12px; color: #cbd5e1;">Hệ thống sẽ nén nhẹ về <strong>~${targetKbps.toLocaleString()} kbps</strong> (~${threshStr}) để video không bị máy chủ TikTok bóp mờ khi đăng.</div>
             `;
         } else {
             smartCapStatus.innerHTML = `
-                <div style="font-weight: 600; color: #10b981; margin-bottom: 4px;">✅ Nằm trong trần an toàn TikTok: Bảo toàn 100% Bitrate gốc</div>
+                <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #10b981; margin-bottom: 6px;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    <span>Nằm trong trần an toàn TikTok: Bảo toàn 100% Bitrate gốc</span>
+                </div>
                 <div>Thời lượng: <strong>${durStr}</strong> | Dung lượng: <strong>${sizeStr}</strong> (Trần an toàn: <strong>${threshStr}</strong>).</div>
                 <div style="margin-top: 4px; font-size: 12px; color: #cbd5e1;">Video đạt chuẩn an toàn của TikTok, sẽ giữ nguyên 100% độ nét gốc và xử lý siêu tốc trong 0.1s!</div>
             `;
