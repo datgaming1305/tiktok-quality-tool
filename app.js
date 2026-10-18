@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             smartCapStatus.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #25f4ee; margin-bottom: 6px;">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#25f4ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
-                    <span>Vượt trần an toàn TikTok: Tự động hạ nhẹ Bitrate (Chuẩn TikQuick)</span>
+                    <span>Vượt trần an toàn TikTok: Tự động hạ nhẹ Bitrate</span>
                 </div>
                 <div>Thời lượng: <strong>${durStr}</strong> | Dung lượng: <strong>${sizeStr}</strong> (Trần an toàn: <strong>${threshStr}</strong>).</div>
                 <div style="margin-top: 4px; font-size: 12px; color: #cbd5e1;">Hệ thống sẽ nén nhẹ về <strong>~${targetKbps.toLocaleString()} kbps</strong> (~${threshStr}) để video không bị máy chủ TikTok bóp mờ khi đăng.</div>
@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const brStr = `${targetBitrate}k`;
             const bufStr = `${targetBitrate * 2}k`;
 
-            updateProgress(`Bắt đầu hạ nhẹ bitrate về ${targetBitrate.toLocaleString()} kbps (Chuẩn TikQuick)...`, 20);
+            updateProgress(`Bắt đầu hạ nhẹ bitrate về ${targetBitrate.toLocaleString()} kbps...`, 20);
 
             const ffmpegArgs = [
                 '-i', 'input.mp4',

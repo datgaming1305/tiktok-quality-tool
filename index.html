@@ -52,17 +52,17 @@
         <button id="btnRemoveFile" class="btn-remove" title="Hủy chọn">✕</button>
       </div>
 
-      <!-- Processing Mode: Tối ưu thông minh chuẩn TikQuick -->
+      <!-- Processing Mode: Tối ưu thông minh -->
       <div class="options-grid" style="grid-template-columns: 1fr;">
         <div id="modeInstant" class="mode-option active" style="cursor: default;">
           <div class="mode-header">
-            <span>Tự Động Tối Ưu Thông Minh (Chuẩn TikQuick Safe Cap)</span>
-            <span class="tag-recommend">Khuyến nghị 100%</span>
+            <span>Tự Động Tối Ưu Thông Minh</span>
+            <span class="tag-recommend">Khuyến nghị</span>
           </div>
           <div class="mode-desc">
-            Tự động tính toán dung lượng an toàn theo thuật toán của TikQuick:
-            <br>• Nếu video dưới trần an toàn TikTok: Giữ nguyên 100% bitrate gốc, xử lý tức thì (0.1s).
-            <br>• Nếu video vượt trần an toàn TikTok: Tự động hạ nhẹ bitrate về mức tối ưu an toàn nhất để tránh bị thuật toán máy chủ TikTok nén đè làm mờ vỡ hình.
+            Tự động tính toán dung lượng an toàn theo tiêu chuẩn của TikTok:
+            <br>• Nếu video dưới trần an toàn: Giữ nguyên 100% bitrate gốc, xử lý tức thì (0.1s).
+            <br>• Nếu video vượt trần an toàn: Tự động hạ nhẹ bitrate về mức tối ưu an toàn nhất để tránh bị thuật toán máy chủ TikTok nén đè làm mờ vỡ hình.
           </div>
           <div id="smartCapStatus" style="display: none; margin-top: 12px; padding: 12px 14px; background: rgba(0, 242, 234, 0.08); border: 1px solid rgba(0, 242, 234, 0.25); border-radius: 8px; font-size: 13px; line-height: 1.5; color: #e0f2fe;">
           </div>
@@ -121,21 +121,63 @@
       </a>
     </div>
 
-    <!-- Userscript Helper Card -->
-    <section class="glass-card helper-section" style="margin-top: 24px; padding: 20px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(254, 44, 85, 0.15); display: flex; align-items: center; justify-content: center; color: var(--tiktok-red);">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+    <!-- 2-Step Workflow Guide -->
+    <section class="glass-card" style="margin-top: 24px; padding: 22px;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--tiktok-cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 14 14"></polyline>
+        </svg>
+        <h2 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0;">Quy trình đăng video chuẩn nét cao (2 bước)</h2>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Bước 1 -->
+        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: var(--tiktok-cyan); margin-bottom: 6px;">
+            <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: rgba(37, 244, 238, 0.15); border-radius: 50%; font-size: 12px;">1</span>
+            <span>Bước 1: Tối ưu file video tại trang web này</span>
           </div>
-          <div>
-            <div style="font-weight: 700; font-size: 15px; color: #fff;">Tiện ích chống nén TikTok Studio Web (Userscript)</div>
-            <div style="font-size: 13px; color: var(--text-dim); margin-top: 2px;">Tự động tắt bộ nén Cloud Canvas khi đăng video trên TikTok Studio, bảo toàn chất lượng gốc.</div>
+          <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; padding-left: 30px;">
+            Thả file clip của bạn vào ô công cụ ở trên để tải về file đã chuẩn hóa đuôi <strong>-optimize.mp4</strong> (chuẩn hóa FastStart, gắn tag FourCC hvc1/avc1, bảo toàn thời lượng thực tế và cân bằng bitrate an toàn).
           </div>
         </div>
-        <a href="tiktok-studio-helper.user.js" class="btn-download" style="padding: 8px 16px; font-size: 13px; text-decoration: none; border-radius: 8px; white-space: nowrap;" download>
-          <span>Tải / Cài Script (Tampermonkey)</span>
-        </a>
+
+        <!-- Bước 2 -->
+        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; color: var(--tiktok-pink);">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: rgba(254, 44, 85, 0.15); border-radius: 50%; font-size: 12px;">2</span>
+              <span>Bước 2: Đăng tải qua Extension TikQuick trên TikTok Studio Web</span>
+            </div>
+            <a href="https://tikquick.online/" target="_blank" rel="noopener noreferrer" class="btn-download" style="padding: 6px 14px; font-size: 12px; width: auto; border-radius: 6px; text-decoration: none; white-space: nowrap;">
+              <span>Tải Extension TikQuick ↗</span>
+            </a>
+          </div>
+
+          <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; padding-left: 30px;">
+            <div style="margin-bottom: 6px;">Mở bảng cài đặt của tiện ích <strong>TikQuick</strong> (icon góc phải trình duyệt) và thiết lập chuẩn:</div>
+            <ul style="list-style: none; padding: 0; margin: 0 0 10px 0; display: flex; flex-direction: column; gap: 5px;">
+              <li style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #10b981; font-weight: bold;">✔</span>
+                <span><strong>Enable Patcher:</strong> BẬT (kích hoạt chống nén khi đăng)</span>
+              </li>
+              <li style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #10b981; font-weight: bold;">✔</span>
+                <span><strong>Disable Initial Processing:</strong> BẬT (bỏ qua nén lại, dùng luôn file đã tối ưu)</span>
+              </li>
+              <li style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #10b981; font-weight: bold;">✔</span>
+                <span><strong>Caption Watermark:</strong> TẮT (tránh bị chèn hashtag quảng cáo vào caption)</span>
+              </li>
+              <li style="display: flex; align-items: center; gap: 8px;">
+                <span style="color: #10b981; font-weight: bold;">✔</span>
+                <span><strong>Video Quality:</strong> Chọn mức <strong>High</strong></span>
+              </li>
+            </ul>
+            <div>Sau đó kéo thả file <strong>-optimize.mp4</strong> vào ô đăng của TikTok Studio và xuất bản bình thường.</div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -203,9 +245,9 @@
   </div>
 
   <!-- Scripts (Vendor FFmpeg local for same-origin Web Worker support) -->
-  <script src="vendor/util.js?v=4.3"></script>
-  <script src="vendor/ffmpeg.js?v=4.3"></script>
-  <script src="tiktok-bypass.js?v=4.3"></script>
-  <script src="app.js?v=4.3"></script>
+  <script src="vendor/util.js?v=4.4"></script>
+  <script src="vendor/ffmpeg.js?v=4.4"></script>
+  <script src="tiktok-bypass.js?v=4.4"></script>
+  <script src="app.js?v=4.4"></script>
 </body>
 </html>
