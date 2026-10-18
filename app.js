@@ -148,9 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
             smartCapStatus.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #ffeb3b; margin-bottom: 6px;">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffeb3b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                    <span>Đã bật ép giữ 100% Bitrate gốc</span>
+                    <span>Giữ nguyên bitrate gốc</span>
                 </div>
-                <div>Thời lượng: <strong>${durStr}</strong> | Dung lượng: <strong>${sizeStr}</strong>. Sẽ bảo toàn 100% khung hình và bitrate gốc, không nén lại dù vượt trần an toàn.</div>
+                <div>Thời lượng: <strong>${durStr}</strong> | Dung lượng: <strong>${sizeStr}</strong>. Bảo toàn 100% khung hình và bitrate gốc của video.</div>
             `;
         } else if (isExceeded) {
             const targetKbps = calculateSafeBitrate(duration, threshold);
